@@ -1,0 +1,69 @@
+{
+  "name": "rwa-asset",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Solana Bank Asset Tokenization Platform - Enterprise-grade infrastructure for tokenizing real-world bank assets on Solana blockchain",
+  "keywords": [
+    "solana",
+    "rwa",
+    "tokenization",
+    "real-world-assets",
+    "blockchain",
+    "defi",
+    "securitize",
+    "civic-pass"
+  ],
+  "author": "RWA Asset Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/rwa-asset.git"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "build:contracts": "cd packages/contracts && anchor build",
+    "test:contracts": "cd packages/contracts && anchor test",
+    "deploy:contracts": "cd packages/contracts && anchor deploy",
+    "db:migrate": "npm run migrate --workspace=apps/api",
+    "db:seed": "npm run seed --workspace=apps/api",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "eslint": "^8.55.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.1.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  },
+  "packageManager": "npm@10.2.0",
+  "dependencies": {
+    "lucide-react": "^0.561.0",
+    "tailwindcss-animate": "^1.0.7"
+  }
+}

@@ -1,0 +1,48 @@
+# =============================================================================
+# RWA Platform - API Service
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: rwa-api
+  namespace: rwa-production
+  labels:
+    app.kubernetes.io/name: rwa-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: rwa-platform
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "4000"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rwa-api
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: 4000
+      protocol: TCP
+  sessionAffinity: None
+---
+# Headless service for StatefulSet scenarios or direct pod access
+apiVersion: v1
+kind: Service
+metadata:
+  name: rwa-api-headless
+  namespace: rwa-production
+  labels:
+    app.kubernetes.io/name: rwa-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: rwa-platform
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: rwa-api
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 4000
+      targetPort: 4000
+      protocol: TCP

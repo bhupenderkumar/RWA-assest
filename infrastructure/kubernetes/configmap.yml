@@ -1,0 +1,127 @@
+# =============================================================================
+# RWA Platform - ConfigMap
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rwa-config
+  namespace: rwa-production
+  labels:
+    app.kubernetes.io/name: rwa-config
+    app.kubernetes.io/part-of: rwa-platform
+data:
+  # Application settings
+  node-env: "production"
+  api-version: "v1"
+  log-level: "warn"
+  
+  # Solana configuration
+  solana-network: "mainnet-beta"
+  solana-rpc-url: "https://api.mainnet-beta.solana.com"
+  solana-ws-url: "wss://api.mainnet-beta.solana.com"
+  solana-commitment: "finalized"
+  
+  # Program IDs (Mainnet)
+  asset-registry-program-id: "<PRODUCTION_ASSET_REGISTRY_PROGRAM_ID>"
+  escrow-program-id: "<PRODUCTION_ESCROW_PROGRAM_ID>"
+  auction-program-id: "<PRODUCTION_AUCTION_PROGRAM_ID>"
+  compliance-program-id: "<PRODUCTION_COMPLIANCE_PROGRAM_ID>"
+  
+  # USDC (Mainnet)
+  usdc-mint: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  
+  # External service URLs
+  securitize-base-url: "https://api.securitize.io/v1"
+  anchorage-base-url: "https://api.anchorage.com/v1"
+  jupiter-api-url: "https://quote-api.jup.ag/v6"
+  
+  # Civic configuration
+  civic-gatekeeper-network: "<PRODUCTION_CIVIC_GATEKEEPER_NETWORK>"
+  civic-environment: "production"
+  
+  # Frontend URLs
+  frontend-url: "https://rwa-platform.com"
+  admin-url: "https://admin.rwa-platform.com"
+  
+  # CORS configuration
+  cors-origins: "https://rwa-platform.com,https://admin.rwa-platform.com,https://www.rwa-platform.com"
+  
+  # Rate limiting
+  rate-limit-window-ms: "60000"
+  rate-limit-max-requests: "60"
+  
+  # Feature flags
+  feature-auctions-enabled: "true"
+  feature-secondary-market-enabled: "true"
+  feature-cross-chain-enabled: "false"
+  
+  # AWS region
+  aws-region: "us-east-1"
+  aws-s3-bucket: "rwa-asset-documents-prod"
+  
+  # Wormhole addresses
+  wormhole-bridge-address: "worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth"
+  wormhole-token-bridge-address: "wormDTUJ6AWPNvk59vGQbDvGJmqbDTdgWgAqcLBCgUb"
+---
+# Staging ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rwa-config
+  namespace: rwa-staging
+  labels:
+    app.kubernetes.io/name: rwa-config
+    app.kubernetes.io/part-of: rwa-platform
+data:
+  # Application settings
+  node-env: "staging"
+  api-version: "v1"
+  log-level: "info"
+  
+  # Solana configuration
+  solana-network: "devnet"
+  solana-rpc-url: "https://api.devnet.solana.com"
+  solana-ws-url: "wss://api.devnet.solana.com"
+  solana-commitment: "confirmed"
+  
+  # Program IDs (Devnet)
+  asset-registry-program-id: "<STAGING_ASSET_REGISTRY_PROGRAM_ID>"
+  escrow-program-id: "<STAGING_ESCROW_PROGRAM_ID>"
+  auction-program-id: "<STAGING_AUCTION_PROGRAM_ID>"
+  compliance-program-id: "<STAGING_COMPLIANCE_PROGRAM_ID>"
+  
+  # USDC (Devnet)
+  usdc-mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+  
+  # External service URLs (Sandbox)
+  securitize-base-url: "https://api.sandbox.securitize.io/v1"
+  anchorage-base-url: "https://api.sandbox.anchorage.com/v1"
+  jupiter-api-url: "https://quote-api.jup.ag/v6"
+  
+  # Civic configuration
+  civic-gatekeeper-network: "tgnuXXNMDLK8dy7Xm1TdeGyc95MDym4bvAQCwcW21Bf"
+  civic-environment: "staging"
+  
+  # Frontend URLs
+  frontend-url: "https://staging.rwa-platform.com"
+  admin-url: "https://admin.staging.rwa-platform.com"
+  
+  # CORS configuration
+  cors-origins: "https://staging.rwa-platform.com,https://admin.staging.rwa-platform.com"
+  
+  # Rate limiting (more permissive)
+  rate-limit-window-ms: "60000"
+  rate-limit-max-requests: "100"
+  
+  # Feature flags
+  feature-auctions-enabled: "true"
+  feature-secondary-market-enabled: "true"
+  feature-cross-chain-enabled: "true"
+  
+  # AWS region
+  aws-region: "us-east-1"
+  aws-s3-bucket: "rwa-asset-documents-staging"
+  
+  # Wormhole addresses
+  wormhole-bridge-address: "worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth"
+  wormhole-token-bridge-address: "wormDTUJ6AWPNvk59vGQbDvGJmqbDTdgWgAqcLBCgUb"

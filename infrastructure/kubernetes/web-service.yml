@@ -1,0 +1,23 @@
+# =============================================================================
+# RWA Platform - Web Service
+# =============================================================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: rwa-web
+  namespace: rwa-production
+  labels:
+    app.kubernetes.io/name: rwa-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: rwa-platform
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rwa-web
+    app.kubernetes.io/component: web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  sessionAffinity: None

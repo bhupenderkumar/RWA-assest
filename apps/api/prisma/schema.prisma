@@ -1,0 +1,389 @@
+// Database schema for RWA Asset Tokenization Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// USER MANAGEMENT
+// ===========================================
+
+model User {
+  id              String    @id @default(uuid())
+  email           String?   @unique
+  passwordHash    String?   @map("password_hash")
+  role            UserRole
+  walletAddress   String?   @unique @map("wallet_address")
+  civicPassToken  String?   @map("civic_pass_token")
+  kycStatus       KycStatus @default(PENDING) @map("kyc_status")
+  kycVerifiedAt   DateTime? @map("kyc_verified_at")
+  isActive        Boolean   @default(true) @map("is_active")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  bank            Bank?           @relation("BankAdmin")
+  investorProfile InvestorProfile?
+  transactions    Transaction[]   @relation("UserTransactions")
+  auditLogs       AuditLog[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  PLATFORM_ADMIN
+  BANK_ADMIN
+  BANK_VIEWER
+  INVESTOR
+  AUDITOR
+}
+
+enum KycStatus {
+  PENDING
+  IN_PROGRESS
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+// ===========================================
+// INVESTOR PROFILE
+// ===========================================
+
+model InvestorProfile {
+  id                  String              @id @default(uuid())
+  userId              String              @unique @map("user_id")
+  firstName           String              @map("first_name")
+  lastName            String              @map("last_name")
+  country             String
+  accreditationStatus AccreditationStatus @default(NONE) @map("accreditation_status")
+  accreditedAt        DateTime?           @map("accredited_at")
+  investorType        InvestorType        @default(INDIVIDUAL) @map("investor_type")
+  riskTolerance       RiskTolerance?      @map("risk_tolerance")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  portfolioHoldings   PortfolioHolding[]
+
+  @@map("investor_profiles")
+}
+
+enum AccreditationStatus {
+  NONE
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum InvestorType {
+  INDIVIDUAL
+  INSTITUTIONAL
+  QUALIFIED_PURCHASER
+}
+
+enum RiskTolerance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ===========================================
+// BANK MANAGEMENT
+// ===========================================
+
+model Bank {
+  id                  String     @id @default(uuid())
+  name                String
+  registrationNumber  String?    @map("registration_number")
+  jurisdiction        String
+  adminUserId         String     @unique @map("admin_user_id")
+  securitizeIssuerId  String?    @map("securitize_issuer_id")
+  anchorageVaultId    String?    @map("anchorage_vault_id")
+  status              BankStatus @default(PENDING)
+  verifiedAt          DateTime?  @map("verified_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  admin               User       @relation("BankAdmin", fields: [adminUserId], references: [id])
+  assets              Asset[]
+
+  @@map("banks")
+}
+
+enum BankStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+  REJECTED
+}
+
+// ===========================================
+// ASSET MANAGEMENT
+// ===========================================
+
+model Asset {
+  id                  String              @id @default(uuid())
+  bankId              String              @map("bank_id")
+  name                String
+  description         String?
+  assetType           AssetType           @map("asset_type")
+  totalValue          Decimal             @map("total_value") @db.Decimal(18, 2)
+  totalSupply         BigInt              @map("total_supply")
+  pricePerToken       Decimal?            @map("price_per_token") @db.Decimal(18, 8)
+  mintAddress         String?             @unique @map("mint_address")
+  metadataUri         String?             @map("metadata_uri")
+  securitizeTokenId   String?             @map("securitize_token_id")
+  tokenizationStatus  TokenizationStatus  @default(DRAFT) @map("tokenization_status")
+  listingStatus       ListingStatus       @default(UNLISTED) @map("listing_status")
+  tokenizedAt         DateTime?           @map("tokenized_at")
+  listedAt            DateTime?           @map("listed_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  bank                Bank                @relation(fields: [bankId], references: [id])
+  documents           Document[]
+  transactions        Transaction[]
+  auctions            Auction[]
+  portfolioHoldings   PortfolioHolding[]
+
+  @@map("assets")
+}
+
+enum AssetType {
+  REAL_ESTATE
+  EQUIPMENT
+  RECEIVABLES
+  SECURITIES
+  COMMODITIES
+  INTELLECTUAL_PROPERTY
+  OTHER
+}
+
+enum TokenizationStatus {
+  DRAFT
+  PENDING_REVIEW
+  PENDING_TOKENIZATION
+  TOKENIZED
+  FAILED
+}
+
+enum ListingStatus {
+  UNLISTED
+  PENDING
+  LISTED
+  SOLD_OUT
+  DELISTED
+}
+
+// ===========================================
+// DOCUMENT MANAGEMENT
+// ===========================================
+
+model Document {
+  id          String       @id @default(uuid())
+  assetId     String       @map("asset_id")
+  type        DocumentType
+  name        String
+  s3Key       String       @map("s3_key")
+  ipfsHash    String?      @map("ipfs_hash")
+  mimeType    String       @map("mime_type")
+  sizeBytes   Int          @map("size_bytes")
+  uploadedBy  String       @map("uploaded_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  asset       Asset        @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+enum DocumentType {
+  APPRAISAL
+  LEGAL_OPINION
+  FINANCIAL_STATEMENT
+  TITLE_DEED
+  INSURANCE
+  PROSPECTUS
+  TERM_SHEET
+  OTHER
+}
+
+// ===========================================
+// TRANSACTION MANAGEMENT
+// ===========================================
+
+model Transaction {
+  id              String            @id @default(uuid())
+  assetId         String            @map("asset_id")
+  buyerId         String            @map("buyer_id")
+  sellerId        String?           @map("seller_id")
+  type            TransactionType
+  amount          Decimal           @db.Decimal(18, 2)
+  tokenAmount     Decimal           @map("token_amount") @db.Decimal(18, 8)
+  txSignature     String?           @map("tx_signature")
+  escrowAddress   String?           @map("escrow_address")
+  status          TransactionStatus @default(PENDING)
+  failureReason   String?           @map("failure_reason")
+  completedAt     DateTime?         @map("completed_at")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  asset           Asset             @relation(fields: [assetId], references: [id])
+  buyer           User              @relation("UserTransactions", fields: [buyerId], references: [id])
+
+  @@map("transactions")
+}
+
+enum TransactionType {
+  PRIMARY_SALE
+  SECONDARY_SALE
+  AUCTION_SETTLEMENT
+  REDEMPTION
+}
+
+enum TransactionStatus {
+  PENDING
+  ESCROW_CREATED
+  PAYMENT_RECEIVED
+  TOKENS_TRANSFERRED
+  COMPLETED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+// ===========================================
+// AUCTION MANAGEMENT
+// ===========================================
+
+model Auction {
+  id              String        @id @default(uuid())
+  assetId         String        @map("asset_id")
+  reservePrice    Decimal       @map("reserve_price") @db.Decimal(18, 2)
+  currentBid      Decimal?      @map("current_bid") @db.Decimal(18, 2)
+  currentBidder   String?       @map("current_bidder")
+  tokenAmount     Decimal       @map("token_amount") @db.Decimal(18, 8)
+  startTime       DateTime      @map("start_time")
+  endTime         DateTime      @map("end_time")
+  status          AuctionStatus @default(SCHEDULED)
+  onChainAddress  String?       @map("on_chain_address")
+  settledAt       DateTime?     @map("settled_at")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  asset           Asset         @relation(fields: [assetId], references: [id])
+  bids            Bid[]
+
+  @@map("auctions")
+}
+
+enum AuctionStatus {
+  SCHEDULED
+  ACTIVE
+  ENDED
+  SETTLED
+  CANCELLED
+}
+
+model Bid {
+  id          String    @id @default(uuid())
+  auctionId   String    @map("auction_id")
+  bidder      String
+  amount      Decimal   @db.Decimal(18, 2)
+  txSignature String?   @map("tx_signature")
+  isWinning   Boolean   @default(false) @map("is_winning")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  auction     Auction   @relation(fields: [auctionId], references: [id], onDelete: Cascade)
+
+  @@map("bids")
+}
+
+// ===========================================
+// PORTFOLIO MANAGEMENT
+// ===========================================
+
+model PortfolioHolding {
+  id          String          @id @default(uuid())
+  investorId  String          @map("investor_id")
+  assetId     String          @map("asset_id")
+  tokenAmount Decimal         @map("token_amount") @db.Decimal(18, 8)
+  costBasis   Decimal         @map("cost_basis") @db.Decimal(18, 2)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  investor    InvestorProfile @relation(fields: [investorId], references: [id])
+  asset       Asset           @relation(fields: [assetId], references: [id])
+
+  @@unique([investorId, assetId])
+  @@map("portfolio_holdings")
+}
+
+// ===========================================
+// AUDIT LOGGING
+// ===========================================
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  oldValue    Json?    @map("old_value")
+  newValue    Json?    @map("new_value")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ===========================================
+// JOB QUEUE TRACKING
+// ===========================================
+
+model Job {
+  id          String    @id @default(uuid())
+  type        JobType
+  entityId    String    @map("entity_id")
+  status      JobStatus @default(PENDING)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3) @map("max_attempts")
+  payload     Json?
+  result      Json?
+  error       String?
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([type, status])
+  @@map("jobs")
+}
+
+enum JobType {
+  TOKENIZATION
+  KYC_VERIFICATION
+  DOCUMENT_PROCESSING
+  NOTIFICATION
+  PRICE_UPDATE
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}

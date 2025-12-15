@@ -1,0 +1,129 @@
+# =============================================================================
+# RWA Platform - Kubernetes Namespace
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rwa-production
+  labels:
+    app.kubernetes.io/name: rwa-platform
+    app.kubernetes.io/part-of: rwa-platform
+    environment: production
+  annotations:
+    description: "RWA Asset Tokenization Platform - Production Environment"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rwa-staging
+  labels:
+    app.kubernetes.io/name: rwa-platform
+    app.kubernetes.io/part-of: rwa-platform
+    environment: staging
+  annotations:
+    description: "RWA Asset Tokenization Platform - Staging Environment"
+---
+# Resource Quota for Production
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: rwa-production-quota
+  namespace: rwa-production
+spec:
+  hard:
+    requests.cpu: "8"
+    requests.memory: 16Gi
+    limits.cpu: "16"
+    limits.memory: 32Gi
+    persistentvolumeclaims: "10"
+    pods: "50"
+    services: "20"
+---
+# Resource Quota for Staging
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: rwa-staging-quota
+  namespace: rwa-staging
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    persistentvolumeclaims: "5"
+    pods: "30"
+    services: "15"
+---
+# Limit Range for Production
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: rwa-production-limits
+  namespace: rwa-production
+spec:
+  limits:
+    - default:
+        cpu: "500m"
+        memory: "512Mi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      max:
+        cpu: "2"
+        memory: "4Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+      type: Container
+---
+# Limit Range for Staging
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: rwa-staging-limits
+  namespace: rwa-staging
+spec:
+  limits:
+    - default:
+        cpu: "250m"
+        memory: "256Mi"
+      defaultRequest:
+        cpu: "50m"
+        memory: "64Mi"
+      max:
+        cpu: "1"
+        memory: "2Gi"
+      min:
+        cpu: "25m"
+        memory: "32Mi"
+      type: Container
+---
+# Network Policy - Default deny all ingress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: rwa-production
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+# Network Policy - Allow ingress from ingress controller
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-controller
+  namespace: rwa-production
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: rwa-platform
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx

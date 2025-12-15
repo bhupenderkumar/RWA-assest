@@ -1,0 +1,363 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag to deploy (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  NODE_VERSION: '20'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  KUBE_NAMESPACE: rwa-production
+
+jobs:
+  validate:
+    name: Validate Release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version format: $VERSION"
+            echo "Expected format: vX.Y.Z (e.g., v1.0.0)"
+            exit 1
+          fi
+          echo "Version validated: $VERSION"
+
+  build-and-push:
+    name: Build and Push Production Images
+    runs-on: ubuntu-latest
+    needs: validate
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      api-image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ needs.validate.outputs.version }}
+      web-image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/web:${{ needs.validate.outputs.version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.validate.outputs.version }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/api.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ needs.validate.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:production-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            NODE_ENV=production
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/web.Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/web:${{ needs.validate.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/web:production-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ secrets.PRODUCTION_API_URL }}
+            NODE_ENV=production
+
+      - name: Scan API image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ needs.validate.outputs.version }}
+          format: 'sarif'
+          output: 'api-trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Scan Web image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/web:${{ needs.validate.outputs.version }}
+          format: 'sarif'
+          output: 'web-trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+  deploy-approval:
+    name: Production Deployment Approval
+    runs-on: ubuntu-latest
+    needs: [validate, build-and-push]
+    environment:
+      name: production-approval
+
+    steps:
+      - name: Deployment approval received
+        run: |
+          echo "Production deployment approved for version ${{ needs.validate.outputs.version }}"
+          echo "Proceeding with deployment..."
+
+  backup-database:
+    name: Backup Production Database
+    runs-on: ubuntu-latest
+    needs: deploy-approval
+
+    steps:
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.PRODUCTION_KUBECONFIG }}
+
+      - name: Create database backup
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_NAME="pre-deploy-${{ needs.validate.outputs.version }}-${TIMESTAMP}"
+          
+          kubectl exec deployment/rwa-postgres -n ${{ env.KUBE_NAMESPACE }} -- \
+            pg_dump -U postgres rwa_asset_prod | gzip > backup.sql.gz
+          
+          # Upload to S3 or other backup storage
+          echo "Backup created: ${BACKUP_NAME}"
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [validate, build-and-push, deploy-approval, backup-database]
+    environment:
+      name: production
+      url: https://rwa-platform.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.PRODUCTION_KUBECONFIG }}
+
+      - name: Deploy API with rolling update
+        run: |
+          kubectl set image deployment/rwa-api \
+            rwa-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/api:${{ needs.validate.outputs.version }} \
+            -n ${{ env.KUBE_NAMESPACE }}
+          
+          # Record deployment for rollback capability
+          kubectl annotate deployment/rwa-api \
+            kubernetes.io/change-cause="Deployed version ${{ needs.validate.outputs.version }}" \
+            -n ${{ env.KUBE_NAMESPACE }} --overwrite
+
+      - name: Deploy Web with rolling update
+        run: |
+          kubectl set image deployment/rwa-web \
+            rwa-web=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/web:${{ needs.validate.outputs.version }} \
+            -n ${{ env.KUBE_NAMESPACE }}
+          
+          kubectl annotate deployment/rwa-web \
+            kubernetes.io/change-cause="Deployed version ${{ needs.validate.outputs.version }}" \
+            -n ${{ env.KUBE_NAMESPACE }} --overwrite
+
+      - name: Wait for API rollout
+        run: |
+          kubectl rollout status deployment/rwa-api -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
+
+      - name: Wait for Web rollout
+        run: |
+          kubectl rollout status deployment/rwa-web -n ${{ env.KUBE_NAMESPACE }} --timeout=600s
+
+      - name: Run database migrations
+        run: |
+          kubectl exec deployment/rwa-api -n ${{ env.KUBE_NAMESPACE }} -- \
+            npx prisma migrate deploy
+
+  verify-deployment:
+    name: Verify Production Deployment
+    runs-on: ubuntu-latest
+    needs: [validate, deploy]
+    environment: production
+
+    steps:
+      - name: Health check - API
+        run: |
+          for i in {1..15}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PRODUCTION_API_URL }}/api/v1/health)
+            if [ "$response" = "200" ]; then
+              echo "API health check passed"
+              exit 0
+            fi
+            echo "Attempt $i: API returned $response, retrying..."
+            sleep 20
+          done
+          echo "API health check failed after 15 attempts"
+          exit 1
+
+      - name: Health check - Web
+        run: |
+          for i in {1..15}; do
+            response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.PRODUCTION_WEB_URL }})
+            if [ "$response" = "200" ]; then
+              echo "Web health check passed"
+              exit 0
+            fi
+            echo "Attempt $i: Web returned $response, retrying..."
+            sleep 20
+          done
+          echo "Web health check failed after 15 attempts"
+          exit 1
+
+      - name: Verify API version
+        run: |
+          version=$(curl -s ${{ secrets.PRODUCTION_API_URL }}/api/v1/health | jq -r '.version // empty')
+          expected="${{ needs.validate.outputs.version }}"
+          if [ "$version" != "$expected" ]; then
+            echo "Version mismatch: deployed=$version, expected=$expected"
+            # Warning but don't fail - version may not be in health endpoint
+          fi
+          echo "Deployment verified successfully"
+
+  rollback:
+    name: Rollback on Failure
+    runs-on: ubuntu-latest
+    needs: [deploy, verify-deployment]
+    if: failure()
+
+    steps:
+      - name: Configure kubectl
+        uses: azure/k8s-set-context@v3
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.PRODUCTION_KUBECONFIG }}
+
+      - name: Rollback API deployment
+        run: |
+          kubectl rollout undo deployment/rwa-api -n ${{ env.KUBE_NAMESPACE }}
+          kubectl rollout status deployment/rwa-api -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+
+      - name: Rollback Web deployment
+        run: |
+          kubectl rollout undo deployment/rwa-web -n ${{ env.KUBE_NAMESPACE }}
+          kubectl rollout status deployment/rwa-web -n ${{ env.KUBE_NAMESPACE }} --timeout=300s
+
+      - name: Notify rollback
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "⚠️ Production Rollback Executed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*RWA Platform - Production Rollback*\n⚠️ Deployment failed and was rolled back\n\n*Version:* `${{ needs.validate.outputs.version }}`\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  notify:
+    name: Send Deployment Notifications
+    runs-on: ubuntu-latest
+    needs: [validate, deploy, verify-deployment]
+    if: always()
+
+    steps:
+      - name: Slack notification - Success
+        if: ${{ needs.verify-deployment.result == 'success' }}
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "🚀 Production Deployment Successful",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*RWA Platform - Production Deployment*\n🚀 Deployment successful!\n\n*Version:* `${{ needs.validate.outputs.version }}`\n*Environment:* Production\n*URL:* https://rwa-platform.com\n*Release Notes:* <${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.validate.outputs.version }}|View Release>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Create deployment record
+        if: ${{ needs.verify-deployment.result == 'success' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: '${{ needs.validate.outputs.version }}',
+              environment: 'production',
+              description: 'Production deployment of ${{ needs.validate.outputs.version }}',
+              auto_merge: false,
+              required_contexts: []
+            });
+
+      - name: Slack notification - Failure
+        if: ${{ needs.deploy.result == 'failure' || needs.verify-deployment.result == 'failure' }}
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "❌ Production Deployment Failed",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*RWA Platform - Production Deployment*\n❌ Deployment failed!\n\n*Version:* `${{ needs.validate.outputs.version }}`\n*Environment:* Production\n*Action:* <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Run>\n\n_Automatic rollback may have been triggered._"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

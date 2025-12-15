@@ -1,0 +1,33 @@
+{
+  "name": "@rwa-asset/contracts",
+  "version": "0.1.0",
+  "description": "Solana smart contracts for RWA asset tokenization",
+  "scripts": {
+    "build": "anchor build",
+    "test": "anchor test",
+    "test:localnet": "anchor test --skip-local-validator",
+    "deploy:devnet": "anchor deploy --provider.cluster devnet",
+    "deploy:mainnet": "anchor deploy --provider.cluster mainnet",
+    "init:devnet": "NETWORK=devnet npx ts-node scripts/initialize.ts",
+    "init:mainnet": "NETWORK=mainnet npx ts-node scripts/initialize.ts",
+    "lint": "cargo clippy --all-targets --all-features",
+    "fmt": "cargo fmt --all",
+    "clean": "anchor clean"
+  },
+  "devDependencies": {
+    "@coral-xyz/anchor": "^0.29.0",
+    "@solana/spl-token": "^0.4.0",
+    "@solana/web3.js": "^1.87.0",
+    "@types/chai": "^4.3.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "chai": "^4.3.0",
+    "mocha": "^10.0.0",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
