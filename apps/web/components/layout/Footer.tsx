@@ -9,22 +9,22 @@ const footerLinks = {
     { name: 'Bank Portal', href: '/bank/dashboard' },
   ],
   resources: [
-    { name: 'Documentation', href: '#', external: true },
-    { name: 'API Reference', href: '#', external: true },
-    { name: 'SDK', href: '#', external: true },
-    { name: 'Whitepaper', href: '#', external: true },
+    { name: 'Documentation', href: '/docs/architecture/ARCHITECTURE', external: false },
+    { name: 'API Reference', href: '/docs/integration/INTEGRATION_GUIDE', external: false },
+    { name: 'SDK', href: '/packages/sdk/README', external: false },
+    // Whitepaper link omitted as not found in project
   ],
   company: [
-    { name: 'About Us', href: '#' },
-    { name: 'Careers', href: '#', badge: 'Hiring' },
-    { name: 'Blog', href: '#' },
-    { name: 'Contact', href: '#' },
+    { name: 'About Us', href: '/about' },
+    { name: 'Careers', href: '/careers', badge: 'Hiring' },
+    { name: 'Blog', href: '/blog' },
+    { name: 'Contact', href: '/contact' },
   ],
   legal: [
-    { name: 'Terms of Service', href: '#' },
-    { name: 'Privacy Policy', href: '#' },
-    { name: 'Risk Disclosure', href: '#' },
-    { name: 'Cookie Policy', href: '#' },
+    { name: 'Terms of Service', href: '/terms-of-service' },
+    { name: 'Privacy Policy', href: '/privacy-policy' },
+    { name: 'Risk Disclosure', href: '/risk-disclosure' },
+    { name: 'Cookie Policy', href: '/cookie-policy' },
   ],
 };
 

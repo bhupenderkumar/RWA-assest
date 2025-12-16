@@ -439,10 +439,24 @@ export class UserService {
     }
 
     const holdings = await prisma.portfolioHolding.findMany({
-      where: { investorId: profile.id },
+      where: {
+        investorId: profile.id,
+        asset: {
+          tokenizationStatus: {
+            in: ['PENDING_REVIEW', 'DRAFT'], // Include relevant statuses
+          },
+        },
+      },
       include: {
         asset: true,
       },
+    });
+
+    // Enhanced logging for debugging
+    logger.debug('Portfolio holdings query executed', {
+      investorId: profile.id,
+      tokenizationStatuses: ['PENDING_REVIEW', 'DRAFT'],
+      queryResults: holdings,
     });
 
     let totalValue = 0;

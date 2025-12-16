@@ -184,6 +184,45 @@ export default function BankDashboardPage() {
 
       {/* Main Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
+        {/* Pending Review Assets */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Review</CardTitle>
+            <CardDescription>Assets awaiting approval</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(assetsResponse?.data ?? [])
+                  .filter(a => a.tokenizationStatus === 'PENDING_APPROVAL' || a.tokenizationStatus === 'PENDING_TOKENIZATION')
+                  .map(asset => (
+                    <div key={asset.id} className="flex items-center justify-between gap-4 p-2 border rounded">
+                      <div>
+                        <p className="font-medium">{asset.name}</p>
+                        <span className="text-xs text-muted-foreground">{formatCurrency(asset.totalValue)}</span>
+                      </div>
+                      <div className="flex gap-2 items-center">
+                        <Badge variant="secondary">{asset.tokenizationStatus.replace('_', ' ')}</Badge>
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/bank/assets/${asset.id}`}>Review</Link>
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                {((assetsResponse?.data ?? []).filter(a => a.tokenizationStatus === 'PENDING_APPROVAL' || a.tokenizationStatus === 'PENDING_TOKENIZATION').length === 0) && (
+                  <div className="py-8 text-center text-muted-foreground text-sm">No assets pending review</div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Recent Assets */}
         <Card>
           <CardHeader>

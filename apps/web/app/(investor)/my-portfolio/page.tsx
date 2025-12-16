@@ -1,3 +1,4 @@
+// Moved from (investor)/portfolio/page.tsx to (investor)/my-portfolio/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,11 +20,9 @@ import Link from 'next/link';
 export default function InvestorPortfolioPage() {
   const [mounted, setMounted] = useState(false);
   const walletState = useWallet();
-  
   useEffect(() => {
     setMounted(true);
   }, []);
-  
   const publicKey = mounted ? walletState.publicKey : null;
   const connected = mounted ? walletState.connected : false;
   const { isAuthenticated, isLoading: authLoading, login } = useAuth();

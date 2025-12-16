@@ -99,6 +99,12 @@ COPY --chown=rwa:nodejs apps/api/package.json ./apps/api/
 # Set working directory
 WORKDIR /app/apps/api
 
+# Install husky globally to fix the issue
+RUN npm install -g husky && husky install
+
+# Update npm to the latest version
+RUN npm install -g npm@latest
+
 # Switch to non-root user
 USER rwa
 

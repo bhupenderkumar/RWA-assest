@@ -243,7 +243,7 @@ export default function KYCPage() {
                 <Link href="/marketplace">Browse Marketplace</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href="/portfolio">View Portfolio</Link>
+                <Link href="/my-portfolio">View Portfolio</Link>
               </Button>
             </div>
           </CardContent>

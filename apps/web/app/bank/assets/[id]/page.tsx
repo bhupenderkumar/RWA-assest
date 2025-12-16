@@ -163,6 +163,18 @@ export default function AssetDetailPage() {
   };
 
   const handleSubmitForReview = async () => {
+
+    const hasAppraisal = asset.documents?.some(doc => doc.type === 'APPRAISAL');
+    const hasLegalOpinion = asset.documents?.some(doc => doc.type === 'LEGAL_OPINION');
+    if (!hasAppraisal || !hasLegalOpinion) {
+      toast({
+        title: 'Submission Failed',
+        description: 'Missing required documents: APPRAISAL, LEGAL_OPINION',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const updated = await api.assets.submitForReview(assetId);
@@ -222,13 +234,14 @@ export default function AssetDetailPage() {
     }
   };
 
+  const [selectedDocType, setSelectedDocType] = useState<'APPRAISAL' | 'LEGAL_OPINION' | 'PROSPECTUS' | 'AUDIT' | 'OTHER'>('APPRAISAL');
   const handleUploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsUploading(true);
     try {
-      await api.assets.uploadDocument(assetId, file, 'OTHER');
+      await api.assets.uploadDocument(assetId, file, selectedDocType);
       // Refresh asset to get updated documents
       await fetchAsset();
       toast({
@@ -756,7 +769,19 @@ export default function AssetDetailPage() {
                 <CardTitle>Legal Documents</CardTitle>
                 <CardDescription>Required documentation for this asset</CardDescription>
               </div>
-              <div>
+              <div className="flex gap-2 items-center">
+                <select
+                  className="border rounded px-2 py-1 text-sm"
+                  value={selectedDocType}
+                  onChange={e => setSelectedDocType(e.target.value as any)}
+                  disabled={isUploading}
+                >
+                  <option value="APPRAISAL">Appraisal</option>
+                  <option value="LEGAL_OPINION">Legal Opinion</option>
+                  <option value="PROSPECTUS">Prospectus</option>
+                  <option value="AUDIT">Audit</option>
+                  <option value="OTHER">Other</option>
+                </select>
                 <input
                   type="file"
                   id="document-upload"

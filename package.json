@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
-    "eslint": "^8.55.0",
+    "eslint": "^8.57.1",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.0",
     "prettier": "^3.1.0",
@@ -64,6 +64,10 @@
   "packageManager": "npm@10.2.0",
   "dependencies": {
     "lucide-react": "^0.561.0",
-    "tailwindcss-animate": "^1.0.7"
+    "next-mdx-remote": "^5.0.0",
+    "tailwindcss-animate": "^1.0.7",
+    "multer": "^2.0.0",
+    "rimraf": "^4.0.0",
+    "glob": "^9.0.0"
   }
 }
