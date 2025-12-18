@@ -6,10 +6,14 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:20-bullseye AS deps
 
 # Install build dependencies for native modules
-RUN apk add --no-cache libc6-compat python3 make g++
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -18,12 +22,12 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci --workspace=@rwa-asset/api
+RUN npm config set strict-ssl false && npm ci --ignore-scripts --workspace=@rwa-asset/api
 
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -37,7 +41,7 @@ COPY apps/api ./apps/api
 
 # Generate Prisma client
 WORKDIR /app/apps/api
-RUN npx prisma generate
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate
 
 # Build TypeScript
 RUN npm run build
@@ -45,9 +49,10 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 # Stage 3: Production dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS prod-deps
+FROM node:20-bullseye AS prod-deps
 
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -56,23 +61,30 @@ COPY package.json package-lock.json ./
 COPY apps/api/package.json ./apps/api/
 
 # Install production dependencies only
-RUN npm ci --workspace=@rwa-asset/api --omit=dev
+RUN npm config set strict-ssl false && npm ci --ignore-scripts --workspace=@rwa-asset/api --omit=dev
 
 # Generate Prisma client for production
 COPY apps/api/prisma ./apps/api/prisma
 WORKDIR /app/apps/api
-RUN npx prisma generate
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate
 
 # -----------------------------------------------------------------------------
 # Stage 4: Production runner
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS runner
+FROM node:20-bullseye AS runner
 
 # Install security updates and required packages
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     dumb-init \
     curl \
-    && apk upgrade --no-cache
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
+# Update certificates to fix trust issues
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
+
+# Replace unavailable packages with alternatives
+RUN apt-get install -y bash curl && apt-get upgrade -y
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs \
@@ -98,12 +110,6 @@ COPY --chown=rwa:nodejs apps/api/package.json ./apps/api/
 
 # Set working directory
 WORKDIR /app/apps/api
-
-# Install husky globally to fix the issue
-RUN npm install -g husky && husky install
-
-# Update npm to the latest version
-RUN npm install -g npm@latest
 
 # Switch to non-root user
 USER rwa

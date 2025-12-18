@@ -163,6 +163,7 @@ export default function AssetDetailPage() {
   };
 
   const handleSubmitForReview = async () => {
+    if (!asset) return;
 
     const hasAppraisal = asset.documents?.some(doc => doc.type === 'APPRAISAL');
     const hasLegalOpinion = asset.documents?.some(doc => doc.type === 'LEGAL_OPINION');

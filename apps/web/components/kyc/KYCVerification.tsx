@@ -86,7 +86,7 @@ export function KYCVerification() {
         </div>
 
         {/* Verification Steps */}
-        {status === 'none' && (
+        {status === 'NONE' && (
           <div className="space-y-4">
             <h4 className="font-medium">What you'll need:</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
@@ -125,7 +125,7 @@ export function KYCVerification() {
           </div>
         )}
 
-        {status === 'pending' && (
+        {status === 'PENDING' && (
           <div className="text-center py-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
             <p className="font-medium">Verification in Progress</p>
@@ -135,7 +135,7 @@ export function KYCVerification() {
           </div>
         )}
 
-        {status === 'verified' && (
+        {status === 'VERIFIED' && (
           <div className="text-center py-4">
             <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
             <p className="font-medium text-lg">You're Verified!</p>
@@ -145,7 +145,7 @@ export function KYCVerification() {
           </div>
         )}
 
-        {status === 'rejected' && (
+        {status === 'REJECTED' && (
           <div className="space-y-4">
             <div className="text-center py-4">
               <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -166,11 +166,11 @@ export function KYCVerification() {
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
-    case 'verified':
+    case 'VERIFIED':
       return <CheckCircle2 className="h-8 w-8 text-green-500" />;
-    case 'pending':
+    case 'PENDING':
       return <Clock className="h-8 w-8 text-yellow-500" />;
-    case 'rejected':
+    case 'REJECTED':
       return <XCircle className="h-8 w-8 text-destructive" />;
     default:
       return <Shield className="h-8 w-8 text-muted-foreground" />;
@@ -179,11 +179,11 @@ function StatusIcon({ status }: { status: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   switch (status) {
-    case 'verified':
+    case 'VERIFIED':
       return <Badge variant="success">Verified</Badge>;
-    case 'pending':
+    case 'PENDING':
       return <Badge variant="warning">Pending</Badge>;
-    case 'rejected':
+    case 'REJECTED':
       return <Badge variant="destructive">Rejected</Badge>;
     default:
       return <Badge variant="outline">Not Started</Badge>;
@@ -192,11 +192,11 @@ function StatusBadge({ status }: { status: string }) {
 
 function getStatusDescription(status: string): string {
   switch (status) {
-    case 'verified':
+    case 'VERIFIED':
       return 'Your identity has been verified';
-    case 'pending':
+    case 'PENDING':
       return 'Verification in progress';
-    case 'rejected':
+    case 'REJECTED':
       return 'Verification was unsuccessful';
     default:
       return 'Complete KYC to invest';

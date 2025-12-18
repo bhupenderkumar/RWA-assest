@@ -287,8 +287,8 @@ export default function AnalyticsPage() {
                         {asset.type}
                       </Badge>
                     </td>
-                    <td className="p-4 text-right">{formatCurrency(asset.value)}</td>
-                    <td className="p-4 text-right">{formatCurrency(asset.tokenPrice)}</td>
+                    <td className="p-4 text-right">{formatCurrency(asset.tvl)}</td>
+                    <td className="p-4 text-right">{formatCurrency(asset.pricePerToken)}</td>
                   </tr>
                 ))}
               </tbody>

@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Run lint-staged for formatting and linting
+npx lint-staged
+
+# Verify builds work
+echo "📦 Verifying API build..."
+npm run build --workspace=@rwa-asset/api
+if [ $? -ne 0 ]; then
+  echo "❌ API build failed. Please fix the errors before committing."
+  exit 1
+fi
+
+echo "📦 Verifying Web build..."
+npm run build --workspace=@rwa-asset/web
+if [ $? -ne 0 ]; then
+  echo "❌ Web build failed. Please fix the errors before committing."
+  exit 1
+fi
+
+echo "✅ All pre-commit checks passed!"

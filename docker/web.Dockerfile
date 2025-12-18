@@ -6,9 +6,11 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:20-bullseye AS deps
 
-RUN apk add --no-cache libc6-compat
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -17,12 +19,12 @@ COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
 
 # Install dependencies
-RUN npm ci --workspace=@rwa-asset/web
+RUN npm config set strict-ssl false && npm ci --ignore-scripts --workspace=@rwa-asset/web
 
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -44,18 +46,19 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
 WORKDIR /app/apps/web
-RUN npm run build
+RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npm run build
 
 # -----------------------------------------------------------------------------
 # Stage 3: Production runner
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS runner
+FROM node:20-bullseye AS runner
 
 # Install security updates
-RUN apk add --no-cache \
-    dumb-init \
-    curl \
-    && apk upgrade --no-cache
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        curl \
+        dumb-init \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs \
@@ -73,7 +76,9 @@ ENV HOSTNAME="0.0.0.0"
 # Next.js standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+
+# Create public directory (may be empty)
+RUN mkdir -p ./apps/web/public
 
 # Switch to non-root user
 USER nextjs

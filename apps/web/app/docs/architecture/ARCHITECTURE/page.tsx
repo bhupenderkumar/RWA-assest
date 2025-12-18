@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { notFound } from 'next/navigation';
-import { MDXRemote } from 'next-mdx-remote/rsc';
 
 export default async function ArchitectureDocPage() {
   const filePath = path.join(process.cwd(), 'docs', 'architecture', 'ARCHITECTURE.md');
@@ -13,7 +12,7 @@ export default async function ArchitectureDocPage() {
   }
   return (
     <div className="prose mx-auto py-8">
-      <MDXRemote source={source} />
+      <pre className="whitespace-pre-wrap">{source}</pre>
     </div>
   );
 }
