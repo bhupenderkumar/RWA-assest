@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS deps
+FROM node:25-bullseye AS deps
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libc6-dev \
@@ -24,7 +24,7 @@ RUN npm config set strict-ssl false && npm ci --ignore-scripts --workspace=@rwa-
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS builder
+FROM node:25-bullseye AS builder
 
 WORKDIR /app
 
@@ -51,7 +51,7 @@ RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npm run build
 # -----------------------------------------------------------------------------
 # Stage 3: Production runner
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS runner
+FROM node:25-bullseye AS runner
 
 # Install security updates
 RUN apt-get update && apt-get install -y --no-install-recommends \
