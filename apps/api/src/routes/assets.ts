@@ -311,12 +311,12 @@ assetsRouter.post(
 /**
  * POST /api/v1/assets/:id/approve
  * 
- * Approve asset for tokenization (admin only)
+ * Approve asset for tokenization (bank admin - temporary, will be platform admin later)
  */
 assetsRouter.post(
   '/:id/approve',
   authenticate,
-  requirePlatformAdmin,
+  requireBankAdmin,
   validateParams(uuidParamSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {

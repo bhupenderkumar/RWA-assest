@@ -215,8 +215,8 @@ export default function TokenizePage() {
     );
   }
 
-  // Check if asset can be tokenized
-  if (asset.tokenizationStatus !== 'DRAFT' && asset.tokenizationStatus !== 'APPROVED') {
+  // Check if asset can be tokenized (DRAFT for direct tokenization, PENDING_TOKENIZATION after approval, FAILED for retry)
+  if (asset.tokenizationStatus !== 'DRAFT' && asset.tokenizationStatus !== 'PENDING_TOKENIZATION' && asset.tokenizationStatus !== 'FAILED') {
     return (
       <div className="container py-8 max-w-4xl">
         <Button asChild variant="ghost" className="mb-4">
@@ -232,6 +232,7 @@ export default function TokenizePage() {
             <p className="text-muted-foreground mb-4">
               This asset is currently in &quot;{asset.tokenizationStatus}&quot; status and cannot be tokenized.
               {asset.tokenizationStatus === 'TOKENIZED' && ' It has already been tokenized.'}
+              {asset.tokenizationStatus === 'PENDING_REVIEW' && ' Please approve the asset first.'}
             </p>
             <Button onClick={() => router.push(`/bank/assets/${assetId}`)}>
               View Asset Details

@@ -70,7 +70,7 @@ function getTokenizationStatusBadge(status: TokenizationStatus) {
     case 'TOKENIZED':
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle2 className="mr-1 h-3 w-3" />Tokenized</Badge>;
     case 'PENDING_TOKENIZATION':
-    case 'PENDING_APPROVAL':
+    case 'PENDING_REVIEW':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="mr-1 h-3 w-3" />Pending</Badge>;
     case 'DRAFT':
       return <Badge variant="outline"><Edit className="mr-1 h-3 w-3" />Draft</Badge>;
@@ -132,7 +132,7 @@ export default function BankAssetsPage() {
     const totalValue = assets.reduce((sum, asset) => sum + asset.totalValue, 0);
     const tokenizedAssets = assets.filter((a) => a.tokenizationStatus === 'TOKENIZED').length;
     const pendingAssets = assets.filter((a) => 
-      a.tokenizationStatus === 'PENDING_TOKENIZATION' || a.tokenizationStatus === 'PENDING_APPROVAL'
+      a.tokenizationStatus === 'PENDING_TOKENIZATION' || a.tokenizationStatus === 'PENDING_REVIEW'
     ).length;
     return { totalValue, tokenizedAssets, pendingAssets, totalAssets: assets.length };
   }, [assets]);

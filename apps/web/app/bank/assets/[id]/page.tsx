@@ -48,12 +48,13 @@ import {
 import { formatCurrency, shortenAddress } from '@/lib/utils';
 import { api, Asset, Transaction, AssetHolder, Document as AssetDocument } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/providers/AuthProvider';
 
 function getStatusBadge(status: string) {
   switch (status) {
     case 'TOKENIZED':
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Tokenized</Badge>;
-    case 'PENDING_APPROVAL':
+    case 'PENDING_REVIEW':
     case 'PENDING_TOKENIZATION':
       return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Pending</Badge>;
     case 'APPROVED':
@@ -83,6 +84,7 @@ export default function AssetDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const assetId = params.id as string;
   const [activeTab, setActiveTab] = useState('overview');
   const [asset, setAsset] = useState<Asset | null>(null);
@@ -94,6 +96,7 @@ export default function AssetDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isListing, setIsListing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   
   // Data for tabs
   const [holders, setHolders] = useState<AssetHolder[]>([]);
@@ -192,6 +195,27 @@ export default function AssetDetailPage() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Platform admin: Approve asset for tokenization
+  const handleApprove = async () => {
+    setIsApproving(true);
+    try {
+      const updated = await api.assets.approve(assetId);
+      setAsset(updated);
+      toast({
+        title: 'Asset Approved',
+        description: 'The asset has been approved for tokenization.',
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Approval Failed',
+        description: err.message || 'Failed to approve asset',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -376,8 +400,24 @@ export default function AssetDetailPage() {
               </Button>
             )}
 
-            {/* Tokenize button - for DRAFT or APPROVED */}
-            {(asset.tokenizationStatus === 'DRAFT' || asset.tokenizationStatus === 'APPROVED') && (
+            {/* Approve button - Bank Admin (temporary) or Platform Admin for PENDING_REVIEW status */}
+            {asset.tokenizationStatus === 'PENDING_REVIEW' && (user?.role === 'PLATFORM_ADMIN' || user?.role === 'BANK_ADMIN') && (
+              <Button
+                onClick={handleApprove}
+                disabled={isApproving}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isApproving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="mr-2 h-4 w-4" />
+                )}
+                Approve for Tokenization
+              </Button>
+            )}
+
+            {/* Tokenize button - for DRAFT or after approval (PENDING_TOKENIZATION) */}
+            {(asset.tokenizationStatus === 'DRAFT' || asset.tokenizationStatus === 'PENDING_TOKENIZATION') && (
               <Button asChild>
                 <Link href={`/bank/assets/${assetId}/tokenize`}>
                   <Coins className="mr-2 h-4 w-4" />

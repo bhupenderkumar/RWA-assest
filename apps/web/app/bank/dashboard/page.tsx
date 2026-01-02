@@ -44,11 +44,14 @@ export default function BankDashboardPage() {
     const totalAssets = assets.length;
     const totalValue = assets.reduce((sum, asset) => sum + asset.totalValue, 0);
     const pendingTokenizations = assets.filter(
-      (a) => a.tokenizationStatus === 'PENDING_TOKENIZATION' || a.tokenizationStatus === 'PENDING_APPROVAL'
+      (a) => a.tokenizationStatus === 'PENDING_TOKENIZATION'
+    ).length;
+    const pendingReview = assets.filter(
+      (a) => a.tokenizationStatus === 'PENDING_REVIEW'
     ).length;
     const tokenizedAssets = assets.filter((a) => a.tokenizationStatus === 'TOKENIZED').length;
     
-    return { totalAssets, totalValue, pendingTokenizations, tokenizedAssets };
+    return { totalAssets, totalValue, pendingTokenizations, pendingReview, tokenizedAssets };
   }, [assetsResponse]);
   
   // Get top performing assets (sorted by value)
@@ -172,7 +175,7 @@ export default function BankDashboardPage() {
               <Skeleton className="h-8 w-16" />
             ) : (
               <>
-                <div className="text-2xl font-bold">{stats.pendingTokenizations}</div>
+                <div className="text-2xl font-bold">{stats.pendingReview}</div>
                 <p className="text-xs text-muted-foreground">
                   Awaiting approval
                 </p>
@@ -200,7 +203,7 @@ export default function BankDashboardPage() {
             ) : (
               <div className="space-y-4">
                 {(assetsResponse?.data ?? [])
-                  .filter(a => a.tokenizationStatus === 'PENDING_APPROVAL' || a.tokenizationStatus === 'PENDING_TOKENIZATION')
+                  .filter(a => a.tokenizationStatus === 'PENDING_REVIEW' || a.tokenizationStatus === 'PENDING_TOKENIZATION')
                   .map(asset => (
                     <div key={asset.id} className="flex items-center justify-between gap-4 p-2 border rounded">
                       <div>
@@ -215,7 +218,7 @@ export default function BankDashboardPage() {
                       </div>
                     </div>
                   ))}
-                {((assetsResponse?.data ?? []).filter(a => a.tokenizationStatus === 'PENDING_APPROVAL' || a.tokenizationStatus === 'PENDING_TOKENIZATION').length === 0) && (
+                {((assetsResponse?.data ?? []).filter(a => a.tokenizationStatus === 'PENDING_REVIEW' || a.tokenizationStatus === 'PENDING_TOKENIZATION').length === 0) && (
                   <div className="py-8 text-center text-muted-foreground text-sm">No assets pending review</div>
                 )}
               </div>

@@ -40,8 +40,7 @@ const listingStatusColors: Record<ListingStatus, 'default' | 'secondary' | 'dest
 
 const tokenizationStatusLabels: Record<TokenizationStatus, string> = {
   DRAFT: 'Draft',
-  PENDING_APPROVAL: 'Pending Approval',
-  APPROVED: 'Approved',
+  PENDING_REVIEW: 'Pending Review',
   PENDING_TOKENIZATION: 'Tokenizing',
   TOKENIZED: 'Tokenized',
   FAILED: 'Failed',

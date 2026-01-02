@@ -274,8 +274,8 @@ npm install
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/rwa-asset.git
-cd rwa-asset
+git clone https://github.com/lab49/rwa.git
+cd rwa
 
 # Copy environment variables
 cp .env.example .env
@@ -283,6 +283,8 @@ cp .env.example .env
 # Configure your environment
 # Edit .env with your API keys and configuration
 ```
+
+For detailed setup instructions, see [docs/SETUP.md](docs/SETUP.md).
 
 ### Required API Keys
 

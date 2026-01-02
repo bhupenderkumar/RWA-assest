@@ -14,7 +14,7 @@ import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'ax
 export type UserRole = 'PLATFORM_ADMIN' | 'BANK_ADMIN' | 'BANK_VIEWER' | 'INVESTOR' | 'AUDITOR';
 export type KYCStatus = 'NONE' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type AssetType = 'REAL_ESTATE' | 'EQUIPMENT' | 'RECEIVABLES' | 'COMMODITIES' | 'SECURITIES' | 'OTHER';
-export type TokenizationStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'PENDING_TOKENIZATION' | 'TOKENIZED' | 'FAILED';
+export type TokenizationStatus = 'DRAFT' | 'PENDING_REVIEW' | 'PENDING_TOKENIZATION' | 'TOKENIZED' | 'FAILED';
 export type ListingStatus = 'UNLISTED' | 'LISTED' | 'PAUSED' | 'DELISTED';
 export type TransactionType = 'PRIMARY_SALE' | 'SECONDARY_SALE' | 'REDEMPTION' | 'DIVIDEND';
 export type TransactionStatus = 'PENDING' | 'ESCROW_FUNDED' | 'TOKENS_TRANSFERRED' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -593,6 +593,13 @@ export const api = {
     submitForReview: async (id: string): Promise<Asset> => {
       const { data } = await apiClient.post<ApiResponse<Asset>>(`/assets/${id}/submit-review`);
       if (!data.success || !data.data) throw new Error(data.error || 'Failed to submit for review');
+      return data.data;
+    },
+
+    // Platform admin endpoint - approve asset for tokenization
+    approve: async (id: string): Promise<Asset> => {
+      const { data } = await apiClient.post<ApiResponse<Asset>>(`/assets/${id}/approve`);
+      if (!data.success || !data.data) throw new Error(data.error || 'Failed to approve asset');
       return data.data;
     },
 

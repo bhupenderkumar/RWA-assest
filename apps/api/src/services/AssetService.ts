@@ -6,9 +6,16 @@
 
 import { prisma } from '../lib/prisma';
 import { logger } from '../utils/logger';
+import { config } from '../config';
 import { tokenizationService } from '../integrations/securitize/TokenizationService';
 import { SecurityType } from '../integrations/securitize/types';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
+
+// Check if we're in mock mode (no real Securitize credentials)
+const isMockMode = !config.securitize.apiKey || 
+  config.securitize.apiKey === 'development_securitize_api_key' ||
+  config.securitize.apiKey.includes('your_') ||
+  config.nodeEnv === 'development';
 
 // Define types locally until Prisma client is generated
 type AssetType = 'REAL_ESTATE' | 'EQUIPMENT' | 'RECEIVABLES' | 'SECURITIES' | 'COMMODITIES' | 'INTELLECTUAL_PROPERTY' | 'OTHER';
@@ -490,9 +497,10 @@ export class AssetService {
       throw new AssetServiceError('Asset not found', 'ASSET_NOT_FOUND', 404);
     }
 
-    if (asset.tokenizationStatus !== 'PENDING_TOKENIZATION') {
+    // Allow tokenization from DRAFT (direct), PENDING_TOKENIZATION (after approval), or FAILED (retry)
+    if (asset.tokenizationStatus !== 'PENDING_TOKENIZATION' && asset.tokenizationStatus !== 'DRAFT' && asset.tokenizationStatus !== 'FAILED') {
       throw new AssetServiceError(
-        'Asset must be approved for tokenization first',
+        'Asset must be in DRAFT, PENDING_TOKENIZATION, or FAILED status to tokenize',
         'INVALID_STATUS',
         400
       );
@@ -510,36 +518,61 @@ export class AssetService {
         OTHER: 'OTHER' as SecurityType,
       };
 
-      // Create offering via Securitize
-      const offering = await tokenizationService.createOffering({
-        symbol: params.symbol,
-        name: asset.name,
-        description: asset.description || '',
-        securityType: securityTypeMap[asset.assetType as AssetType],
-        totalSupply: Number(asset.totalSupply),
-        pricePerToken: Number(asset.pricePerToken) * 100, // Convert to cents
-        minimumInvestment: params.minimumInvestment * 100,
-        maximumInvestment: params.maximumInvestment ? params.maximumInvestment * 100 : undefined,
-        startDate: params.startDate,
-        endDate: params.endDate,
-        underlyingAsset: {
-          type: asset.assetType,
-          value: Number(asset.totalValue),
-        },
-      });
+      let offeringId: string;
+      let mintAddress: string;
+      let metadataUri: string | undefined;
 
-      // Deploy token on Solana
-      // In production, this would use a secure key management system
-      const authorityKeypair = Keypair.generate(); // Placeholder
-      const mintedToken = await tokenizationService.deployToken(offering.id, authorityKeypair);
+      if (isMockMode) {
+        // Mock mode: Generate simulated tokenization data
+        logger.info('Using mock tokenization mode (no real Securitize credentials)');
+        
+        // Generate mock offering ID and mint address
+        offeringId = `mock-offering-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const mockMint = Keypair.generate();
+        mintAddress = mockMint.publicKey.toBase58();
+        metadataUri = `https://mock-metadata.example.com/${offeringId}`;
+        
+        logger.info('Mock tokenization completed', { 
+          assetId, 
+          offeringId, 
+          mintAddress 
+        });
+      } else {
+        // Real mode: Use Securitize API
+        const offering = await tokenizationService.createOffering({
+          symbol: params.symbol,
+          name: asset.name,
+          description: asset.description || '',
+          securityType: securityTypeMap[asset.assetType as AssetType],
+          totalSupply: Number(asset.totalSupply),
+          pricePerToken: Number(asset.pricePerToken) * 100, // Convert to cents
+          minimumInvestment: params.minimumInvestment * 100,
+          maximumInvestment: params.maximumInvestment ? params.maximumInvestment * 100 : undefined,
+          startDate: params.startDate,
+          endDate: params.endDate,
+          underlyingAsset: {
+            type: asset.assetType,
+            value: Number(asset.totalValue),
+          },
+        });
+
+        // Deploy token on Solana
+        // In production, this would use a secure key management system
+        const authorityKeypair = Keypair.generate(); // Placeholder
+        const mintedToken = await tokenizationService.deployToken(offering.id, authorityKeypair);
+        
+        offeringId = offering.id;
+        mintAddress = mintedToken.mintAddress;
+        metadataUri = mintedToken.metadataUri;
+      }
 
       // Update asset with tokenization info
       const updated = await prisma.asset.update({
         where: { id: assetId },
         data: {
-          securitizeTokenId: offering.id,
-          mintAddress: mintedToken.mintAddress,
-          metadataUri: mintedToken.metadataUri,
+          securitizeTokenId: offeringId,
+          mintAddress: mintAddress,
+          metadataUri: metadataUri,
           tokenizationStatus: 'TOKENIZED',
           tokenizedAt: new Date(),
         },
@@ -559,8 +592,9 @@ export class AssetService {
 
       logger.info('Asset tokenized', { 
         assetId, 
-        offeringId: offering.id, 
-        mintAddress: mintedToken.mintAddress 
+        offeringId, 
+        mintAddress,
+        mockMode: isMockMode
       });
 
       return this.formatAsset(updated);
