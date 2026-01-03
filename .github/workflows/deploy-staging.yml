@@ -196,7 +196,7 @@ jobs:
     steps:
       - name: Slack notification - Success
         if: ${{ needs.smoke-tests.result == 'success' }}
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
           payload: |
             {
@@ -217,7 +217,7 @@ jobs:
 
       - name: Slack notification - Failure
         if: ${{ needs.deploy.result == 'failure' || needs.smoke-tests.result == 'failure' }}
-        uses: slackapi/slack-github-action@v1.24.0
+        uses: slackapi/slack-github-action@v2.1.1
         with:
           payload: |
             {
