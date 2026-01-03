@@ -1,20 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useState, useMemo } from "react";
+import Link from "next/link";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +30,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from "@/components/ui/alert-dialog";
 import {
   Building2,
   Plus,
@@ -44,38 +50,64 @@ import {
   Pause,
   Send,
   Loader2,
-} from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
-import { useAssets } from '@/hooks/useAssets';
-import { api, Asset, AssetType, ListingStatus, TokenizationStatus } from '@/lib/api';
-import { useToast } from '@/hooks/use-toast';
+} from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { useAssets } from "@/hooks/useAssets";
+import {
+  api,
+  Asset,
+  AssetType,
+  ListingStatus,
+  TokenizationStatus,
+} from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 const assetTypes = [
-  { value: 'all', label: 'All Types' },
-  { value: 'REAL_ESTATE', label: 'Real Estate' },
-  { value: 'COMMODITIES', label: 'Commodities' },
-  { value: 'EQUIPMENT', label: 'Equipment' },
-  { value: 'RECEIVABLES', label: 'Receivables' },
+  { value: "all", label: "All Types" },
+  { value: "REAL_ESTATE", label: "Real Estate" },
+  { value: "COMMODITIES", label: "Commodities" },
+  { value: "EQUIPMENT", label: "Equipment" },
+  { value: "RECEIVABLES", label: "Receivables" },
 ];
 
 const statusFilters = [
-  { value: 'all', label: 'All Status' },
-  { value: 'DRAFT', label: 'Draft' },
-  { value: 'PENDING_TOKENIZATION', label: 'Pending' },
-  { value: 'TOKENIZED', label: 'Tokenized' },
+  { value: "all", label: "All Status" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "PENDING_TOKENIZATION", label: "Pending" },
+  { value: "TOKENIZED", label: "Tokenized" },
 ];
 
 function getTokenizationStatusBadge(status: TokenizationStatus) {
   switch (status) {
-    case 'TOKENIZED':
-      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100"><CheckCircle2 className="mr-1 h-3 w-3" />Tokenized</Badge>;
-    case 'PENDING_TOKENIZATION':
-    case 'PENDING_REVIEW':
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100"><Clock className="mr-1 h-3 w-3" />Pending</Badge>;
-    case 'DRAFT':
-      return <Badge variant="outline"><Edit className="mr-1 h-3 w-3" />Draft</Badge>;
-    case 'FAILED':
-      return <Badge className="bg-red-100 text-red-800 hover:bg-red-100"><XCircle className="mr-1 h-3 w-3" />Failed</Badge>;
+    case "TOKENIZED":
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <CheckCircle2 className="mr-1 h-3 w-3" />
+          Tokenized
+        </Badge>
+      );
+    case "PENDING_TOKENIZATION":
+    case "PENDING_REVIEW":
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          <Clock className="mr-1 h-3 w-3" />
+          Pending
+        </Badge>
+      );
+    case "DRAFT":
+      return (
+        <Badge variant="outline">
+          <Edit className="mr-1 h-3 w-3" />
+          Draft
+        </Badge>
+      );
+    case "FAILED":
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          <XCircle className="mr-1 h-3 w-3" />
+          Failed
+        </Badge>
+      );
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -83,12 +115,20 @@ function getTokenizationStatusBadge(status: TokenizationStatus) {
 
 function getListingStatusBadge(status: ListingStatus) {
   switch (status) {
-    case 'LISTED':
-      return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Listed</Badge>;
-    case 'UNLISTED':
+    case "LISTED":
+      return (
+        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          Listed
+        </Badge>
+      );
+    case "UNLISTED":
       return <Badge variant="outline">Unlisted</Badge>;
-    case 'PAUSED':
-      return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Paused</Badge>;
+    case "PAUSED":
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          Paused
+        </Badge>
+      );
     default:
       return <Badge variant="outline">{status}</Badge>;
   }
@@ -96,10 +136,10 @@ function getListingStatusBadge(status: ListingStatus) {
 
 export default function BankAssetsPage() {
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+
   // Action states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
@@ -107,8 +147,13 @@ export default function BankAssetsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   // Fetch assets from API
-  const { data: assetsResponse, isLoading, error, refetch } = useAssets({
-    type: selectedType === 'all' ? undefined : selectedType as AssetType,
+  const {
+    data: assetsResponse,
+    isLoading,
+    error,
+    refetch,
+  } = useAssets({
+    type: selectedType === "all" ? undefined : (selectedType as AssetType),
   });
 
   // Extract assets from response
@@ -119,10 +164,12 @@ export default function BankAssetsPage() {
   // Filter assets by search and status
   const filteredAssets = useMemo(() => {
     return assets.filter((asset) => {
-      const matchesSearch = !searchQuery.trim() ||
+      const matchesSearch =
+        !searchQuery.trim() ||
         asset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         asset.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = selectedStatus === 'all' || asset.tokenizationStatus === selectedStatus;
+      const matchesStatus =
+        selectedStatus === "all" || asset.tokenizationStatus === selectedStatus;
       return matchesSearch && matchesStatus;
     });
   }, [assets, searchQuery, selectedStatus]);
@@ -130,30 +177,39 @@ export default function BankAssetsPage() {
   // Calculate stats
   const stats = useMemo(() => {
     const totalValue = assets.reduce((sum, asset) => sum + asset.totalValue, 0);
-    const tokenizedAssets = assets.filter((a) => a.tokenizationStatus === 'TOKENIZED').length;
-    const pendingAssets = assets.filter((a) => 
-      a.tokenizationStatus === 'PENDING_TOKENIZATION' || a.tokenizationStatus === 'PENDING_REVIEW'
+    const tokenizedAssets = assets.filter(
+      (a) => a.tokenizationStatus === "TOKENIZED",
     ).length;
-    return { totalValue, tokenizedAssets, pendingAssets, totalAssets: assets.length };
+    const pendingAssets = assets.filter(
+      (a) =>
+        a.tokenizationStatus === "PENDING_TOKENIZATION" ||
+        a.tokenizationStatus === "PENDING_REVIEW",
+    ).length;
+    return {
+      totalValue,
+      tokenizedAssets,
+      pendingAssets,
+      totalAssets: assets.length,
+    };
   }, [assets]);
 
   // Action handlers
   const handleDeleteAsset = async () => {
     if (!assetToDelete) return;
-    
+
     setIsDeleting(true);
     try {
       await api.assets.delete(assetToDelete.id);
       toast({
-        title: 'Asset Deleted',
+        title: "Asset Deleted",
         description: `"${assetToDelete.name}" has been deleted.`,
       });
       refetch(); // Refresh the list
     } catch (err: any) {
       toast({
-        title: 'Delete Failed',
-        description: err.message || 'Failed to delete asset',
-        variant: 'destructive',
+        title: "Delete Failed",
+        description: err.message || "Failed to delete asset",
+        variant: "destructive",
       });
     } finally {
       setIsDeleting(false);
@@ -167,15 +223,15 @@ export default function BankAssetsPage() {
     try {
       await api.assets.submitForReview(asset.id);
       toast({
-        title: 'Submitted for Review',
+        title: "Submitted for Review",
         description: `"${asset.name}" has been submitted for approval.`,
       });
       refetch(); // Refresh the list
     } catch (err: any) {
       toast({
-        title: 'Submission Failed',
-        description: err.message || 'Failed to submit for review',
-        variant: 'destructive',
+        title: "Submission Failed",
+        description: err.message || "Failed to submit for review",
+        variant: "destructive",
       });
     } finally {
       setActionLoading(null);
@@ -187,15 +243,15 @@ export default function BankAssetsPage() {
     try {
       await api.assets.list_asset(asset.id);
       toast({
-        title: 'Asset Listed',
+        title: "Asset Listed",
         description: `"${asset.name}" is now listed on the marketplace.`,
       });
       refetch(); // Refresh the list
     } catch (err: any) {
       toast({
-        title: 'Listing Failed',
-        description: err.message || 'Failed to list asset',
-        variant: 'destructive',
+        title: "Listing Failed",
+        description: err.message || "Failed to list asset",
+        variant: "destructive",
       });
     } finally {
       setActionLoading(null);
@@ -207,15 +263,15 @@ export default function BankAssetsPage() {
     try {
       await api.assets.delist_asset(asset.id);
       toast({
-        title: 'Asset Delisted',
+        title: "Asset Delisted",
         description: `"${asset.name}" has been removed from the marketplace.`,
       });
       refetch(); // Refresh the list
     } catch (err: any) {
       toast({
-        title: 'Delist Failed',
-        description: err.message || 'Failed to delist asset',
-        variant: 'destructive',
+        title: "Delist Failed",
+        description: err.message || "Failed to delist asset",
+        variant: "destructive",
       });
     } finally {
       setActionLoading(null);
@@ -230,12 +286,13 @@ export default function BankAssetsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Asset</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &quot;{assetToDelete?.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{assetToDelete?.name}&quot;?
+              This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDeleteAsset}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
@@ -246,7 +303,7 @@ export default function BankAssetsPage() {
                   Deleting...
                 </>
               ) : (
-                'Delete'
+                "Delete"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -308,7 +365,9 @@ export default function BankAssetsPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-24" />
             ) : (
-              <div className="text-2xl font-bold">${(stats.totalValue / 1000000).toFixed(1)}M</div>
+              <div className="text-2xl font-bold">
+                ${(stats.totalValue / 1000000).toFixed(1)}M
+              </div>
             )}
           </CardContent>
         </Card>
@@ -322,7 +381,9 @@ export default function BankAssetsPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-12" />
             ) : (
-              <div className="text-2xl font-bold text-green-600">{stats.tokenizedAssets}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {stats.tokenizedAssets}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -336,7 +397,9 @@ export default function BankAssetsPage() {
             {isLoading ? (
               <Skeleton className="h-8 w-12" />
             ) : (
-              <div className="text-2xl font-bold text-yellow-600">{stats.pendingAssets}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {stats.pendingAssets}
+              </div>
             )}
           </CardContent>
         </Card>
@@ -391,7 +454,10 @@ export default function BankAssetsPage() {
               </thead>
               <tbody>
                 {filteredAssets.map((asset) => (
-                  <tr key={asset.id} className="border-b hover:bg-muted/50 transition-colors">
+                  <tr
+                    key={asset.id}
+                    className="border-b hover:bg-muted/50 transition-colors"
+                  >
                     <td className="p-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
@@ -400,37 +466,47 @@ export default function BankAssetsPage() {
                         <div>
                           <p className="font-medium">{asset.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            Created {new Date(asset.createdAt).toLocaleDateString()}
+                            Created{" "}
+                            {new Date(asset.createdAt).toLocaleDateString()}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="p-4">
                       <span className="capitalize text-sm">
-                        {asset.assetType.replace('_', ' ').toLowerCase()}
+                        {asset.assetType.replace("_", " ").toLowerCase()}
                       </span>
                     </td>
                     <td className="p-4">
                       <div className="flex gap-1">
                         {getTokenizationStatusBadge(asset.tokenizationStatus)}
-                        {asset.listingStatus === 'LISTED' && getListingStatusBadge(asset.listingStatus)}
+                        {asset.listingStatus === "LISTED" &&
+                          getListingStatusBadge(asset.listingStatus)}
                       </div>
                     </td>
                     <td className="p-4 text-right font-medium">
                       {formatCurrency(asset.totalValue)}
                     </td>
                     <td className="p-4 text-right">
-                      {asset.tokenizationStatus === 'TOKENIZED' ? (
-                        <span className="text-green-600">{asset._count?.holdings || 0}</span>
+                      {asset.tokenizationStatus === "TOKENIZED" ? (
+                        <span className="text-green-600">
+                          {asset._count?.holdings || 0}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">-</span>
                       )}
                     </td>
-                    <td className="p-4 text-right">{asset._count?.transactions || '-'}</td>
+                    <td className="p-4 text-right">
+                      {asset._count?.transactions || "-"}
+                    </td>
                     <td className="p-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" disabled={actionLoading === asset.id}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            disabled={actionLoading === asset.id}
+                          >
                             {actionLoading === asset.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -448,7 +524,7 @@ export default function BankAssetsPage() {
                           </DropdownMenuItem>
 
                           {/* Edit - only for non-tokenized assets */}
-                          {asset.tokenizationStatus !== 'TOKENIZED' && (
+                          {asset.tokenizationStatus !== "TOKENIZED" && (
                             <DropdownMenuItem asChild>
                               <Link href={`/bank/assets/${asset.id}/edit`}>
                                 <Edit className="mr-2 h-4 w-4" />
@@ -460,15 +536,19 @@ export default function BankAssetsPage() {
                           <DropdownMenuSeparator />
 
                           {/* Submit for Review - only for DRAFT */}
-                          {asset.tokenizationStatus === 'DRAFT' && (
-                            <DropdownMenuItem onClick={() => handleSubmitForReview(asset)}>
+                          {asset.tokenizationStatus === "DRAFT" && (
+                            <DropdownMenuItem
+                              onClick={() => handleSubmitForReview(asset)}
+                            >
                               <Send className="mr-2 h-4 w-4" />
                               Submit for Review
                             </DropdownMenuItem>
                           )}
 
-                          {/* Tokenize - for DRAFT or APPROVED */}
-                          {(asset.tokenizationStatus === 'DRAFT' || asset.tokenizationStatus === 'APPROVED') && (
+                          {/* Tokenize - for DRAFT or PENDING_TOKENIZATION */}
+                          {(asset.tokenizationStatus === "DRAFT" ||
+                            asset.tokenizationStatus ===
+                              "PENDING_TOKENIZATION") && (
                             <DropdownMenuItem asChild>
                               <Link href={`/bank/assets/${asset.id}/tokenize`}>
                                 <Coins className="mr-2 h-4 w-4" />
@@ -478,26 +558,32 @@ export default function BankAssetsPage() {
                           )}
 
                           {/* List on Marketplace - for tokenized but not listed */}
-                          {asset.tokenizationStatus === 'TOKENIZED' && asset.listingStatus !== 'LISTED' && (
-                            <DropdownMenuItem onClick={() => handleListAsset(asset)}>
-                              <Play className="mr-2 h-4 w-4" />
-                              List on Marketplace
-                            </DropdownMenuItem>
-                          )}
+                          {asset.tokenizationStatus === "TOKENIZED" &&
+                            asset.listingStatus !== "LISTED" && (
+                              <DropdownMenuItem
+                                onClick={() => handleListAsset(asset)}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                List on Marketplace
+                              </DropdownMenuItem>
+                            )}
 
                           {/* Delist - for listed assets */}
-                          {asset.tokenizationStatus === 'TOKENIZED' && asset.listingStatus === 'LISTED' && (
-                            <DropdownMenuItem onClick={() => handleDelistAsset(asset)}>
-                              <Pause className="mr-2 h-4 w-4" />
-                              Delist from Marketplace
-                            </DropdownMenuItem>
-                          )}
+                          {asset.tokenizationStatus === "TOKENIZED" &&
+                            asset.listingStatus === "LISTED" && (
+                              <DropdownMenuItem
+                                onClick={() => handleDelistAsset(asset)}
+                              >
+                                <Pause className="mr-2 h-4 w-4" />
+                                Delist from Marketplace
+                              </DropdownMenuItem>
+                            )}
 
                           {/* Delete - only for DRAFT */}
-                          {asset.tokenizationStatus === 'DRAFT' && (
+                          {asset.tokenizationStatus === "DRAFT" && (
                             <>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => {
                                   setAssetToDelete(asset);
@@ -530,7 +616,9 @@ export default function BankAssetsPage() {
           {!isLoading && filteredAssets.length === 0 && (
             <div className="py-12 text-center">
               <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">No assets found matching your criteria</p>
+              <p className="text-muted-foreground mb-4">
+                No assets found matching your criteria
+              </p>
               <Button asChild>
                 <Link href="/bank/assets/new">Create Your First Asset</Link>
               </Button>

@@ -4,9 +4,8 @@ import {
   GetProgramAccountsFilter,
   MemcmpFilter,
   DataSizeFilter,
-} from '@solana/web3.js';
-import { BorshCoder, Idl } from '@coral-xyz/anchor';
-import BN from 'bn.js';
+} from "@solana/web3.js";
+import BN from "bn.js";
 import {
   ASSET_REGISTRY_PROGRAM_ID,
   ESCROW_PROGRAM_ID,
@@ -16,7 +15,7 @@ import {
   ESCROW_SEEDS,
   AUCTION_SEEDS,
   COMPLIANCE_SEEDS,
-} from '../constants';
+} from "../constants";
 import {
   Config,
   Asset,
@@ -35,7 +34,7 @@ import {
   BidStatus,
   InvestorType,
   AccountNotFoundError,
-} from '../types';
+} from "../types";
 
 // =============================================================================
 // PDA Derivation Functions
@@ -47,7 +46,7 @@ import {
 export function deriveAssetRegistryConfig(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [ASSET_REGISTRY_SEEDS.CONFIG],
-    ASSET_REGISTRY_PROGRAM_ID
+    ASSET_REGISTRY_PROGRAM_ID,
   );
 }
 
@@ -57,7 +56,7 @@ export function deriveAssetRegistryConfig(): [PublicKey, number] {
 export function deriveAsset(mint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [ASSET_REGISTRY_SEEDS.ASSET, mint.toBuffer()],
-    ASSET_REGISTRY_PROGRAM_ID
+    ASSET_REGISTRY_PROGRAM_ID,
   );
 }
 
@@ -67,7 +66,7 @@ export function deriveAsset(mint: PublicKey): [PublicKey, number] {
 export function deriveMintConfig(mint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [ASSET_REGISTRY_SEEDS.MINT_CONFIG, mint.toBuffer()],
-    ASSET_REGISTRY_PROGRAM_ID
+    ASSET_REGISTRY_PROGRAM_ID,
   );
 }
 
@@ -77,7 +76,7 @@ export function deriveMintConfig(mint: PublicKey): [PublicKey, number] {
 export function deriveMintAuthority(mint: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [ASSET_REGISTRY_SEEDS.MINT_AUTHORITY, mint.toBuffer()],
-    ASSET_REGISTRY_PROGRAM_ID
+    ASSET_REGISTRY_PROGRAM_ID,
   );
 }
 
@@ -86,11 +85,11 @@ export function deriveMintAuthority(mint: PublicKey): [PublicKey, number] {
  */
 export function deriveEscrow(
   buyer: PublicKey,
-  assetMint: PublicKey
+  assetMint: PublicKey,
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [ESCROW_SEEDS.ESCROW, buyer.toBuffer(), assetMint.toBuffer()],
-    ESCROW_PROGRAM_ID
+    ESCROW_PROGRAM_ID,
   );
 }
 
@@ -100,16 +99,16 @@ export function deriveEscrow(
 export function deriveAuction(
   seller: PublicKey,
   assetMint: PublicKey,
-  createdAt: BN
+  createdAt: BN,
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [
       AUCTION_SEEDS.AUCTION,
       seller.toBuffer(),
       assetMint.toBuffer(),
-      createdAt.toArrayLike(Buffer, 'le', 8),
+      createdAt.toArrayLike(Buffer, "le", 8),
     ],
-    AUCTION_PROGRAM_ID
+    AUCTION_PROGRAM_ID,
   );
 }
 
@@ -118,11 +117,11 @@ export function deriveAuction(
  */
 export function deriveBid(
   auction: PublicKey,
-  bidder: PublicKey
+  bidder: PublicKey,
 ): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [AUCTION_SEEDS.BID, auction.toBuffer(), bidder.toBuffer()],
-    AUCTION_PROGRAM_ID
+    AUCTION_PROGRAM_ID,
   );
 }
 
@@ -132,7 +131,7 @@ export function deriveBid(
 export function deriveComplianceConfig(): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [COMPLIANCE_SEEDS.CONFIG],
-    COMPLIANCE_PROGRAM_ID
+    COMPLIANCE_PROGRAM_ID,
   );
 }
 
@@ -142,7 +141,7 @@ export function deriveComplianceConfig(): [PublicKey, number] {
 export function deriveWhitelistEntry(investor: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [COMPLIANCE_SEEDS.WHITELIST, investor.toBuffer()],
-    COMPLIANCE_PROGRAM_ID
+    COMPLIANCE_PROGRAM_ID,
   );
 }
 
@@ -152,7 +151,7 @@ export function deriveWhitelistEntry(investor: PublicKey): [PublicKey, number] {
 export function deriveBlacklistEntry(address: PublicKey): [PublicKey, number] {
   return PublicKey.findProgramAddressSync(
     [COMPLIANCE_SEEDS.BLACKLIST, address.toBuffer()],
-    COMPLIANCE_PROGRAM_ID
+    COMPLIANCE_PROGRAM_ID,
   );
 }
 
@@ -161,14 +160,14 @@ export function deriveBlacklistEntry(address: PublicKey): [PublicKey, number] {
  */
 export function deriveJurisdictionRule(
   fromJurisdiction: string,
-  toJurisdiction: string
+  toJurisdiction: string,
 ): [PublicKey, number] {
   const fromBytes = Buffer.from(fromJurisdiction.toUpperCase().slice(0, 2));
   const toBytes = Buffer.from(toJurisdiction.toUpperCase().slice(0, 2));
 
   return PublicKey.findProgramAddressSync(
     [COMPLIANCE_SEEDS.JURISDICTION, fromBytes, toBytes],
-    COMPLIANCE_PROGRAM_ID
+    COMPLIANCE_PROGRAM_ID,
   );
 }
 
@@ -186,7 +185,7 @@ export function deserializeConfig(data: Buffer): Config {
   return {
     authority: new PublicKey(data.subarray(offset, offset + 32)),
     platformFeeBps: data.readUInt16LE(offset + 32),
-    totalAssets: new BN(data.subarray(offset + 34, offset + 42), 'le'),
+    totalAssets: new BN(data.subarray(offset + 34, offset + 42), "le"),
     bump: data.readUInt8(offset + 42),
   };
 }
@@ -206,30 +205,30 @@ export function deserializeAsset(data: Buffer): Asset {
 
   const nameLen = data.readUInt32LE(pos);
   pos += 4;
-  const name = data.subarray(pos, pos + nameLen).toString('utf8');
+  const name = data.subarray(pos, pos + nameLen).toString("utf8");
   pos += nameLen;
 
   const assetType = data.readUInt8(pos) as AssetType;
   pos += 1;
 
-  const totalValue = new BN(data.subarray(pos, pos + 8), 'le');
+  const totalValue = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const totalSupply = new BN(data.subarray(pos, pos + 8), 'le');
+  const totalSupply = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const uriLen = data.readUInt32LE(pos);
   pos += 4;
-  const metadataUri = data.subarray(pos, pos + uriLen).toString('utf8');
+  const metadataUri = data.subarray(pos, pos + uriLen).toString("utf8");
   pos += uriLen;
 
   const status = data.readUInt8(pos) as AssetStatus;
   pos += 1;
 
-  const createdAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const createdAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const updatedAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const updatedAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const bump = data.readUInt8(pos);
@@ -274,17 +273,17 @@ export function deserializeMintConfig(data: Buffer): MintConfig {
 
   const nameLen = data.readUInt32LE(pos);
   pos += 4;
-  const name = data.subarray(pos, pos + nameLen).toString('utf8');
+  const name = data.subarray(pos, pos + nameLen).toString("utf8");
   pos += nameLen;
 
   const symbolLen = data.readUInt32LE(pos);
   pos += 4;
-  const symbol = data.subarray(pos, pos + symbolLen).toString('utf8');
+  const symbol = data.subarray(pos, pos + symbolLen).toString("utf8");
   pos += symbolLen;
 
   const uriLen = data.readUInt32LE(pos);
   pos += 4;
-  const uri = data.subarray(pos, pos + uriLen).toString('utf8');
+  const uri = data.subarray(pos, pos + uriLen).toString("utf8");
   pos += uriLen;
 
   const decimals = data.readUInt8(pos);
@@ -293,7 +292,7 @@ export function deserializeMintConfig(data: Buffer): MintConfig {
   const isFrozen = data.readUInt8(pos) === 1;
   pos += 1;
 
-  const createdAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const createdAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const bump = data.readUInt8(pos);
@@ -332,19 +331,19 @@ export function deserializeEscrow(data: Buffer): Escrow {
   const paymentMint = new PublicKey(data.subarray(pos, pos + 32));
   pos += 32;
 
-  const assetAmount = new BN(data.subarray(pos, pos + 8), 'le');
+  const assetAmount = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const paymentAmount = new BN(data.subarray(pos, pos + 8), 'le');
+  const paymentAmount = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const status = data.readUInt8(pos) as EscrowStatus;
   pos += 1;
 
-  const createdAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const createdAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const expiresAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const expiresAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const bump = data.readUInt8(pos);
@@ -379,37 +378,37 @@ export function deserializeAuction(data: Buffer): Auction {
   const paymentMint = new PublicKey(data.subarray(pos, pos + 32));
   pos += 32;
 
-  const assetAmount = new BN(data.subarray(pos, pos + 8), 'le');
+  const assetAmount = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const startingPrice = new BN(data.subarray(pos, pos + 8), 'le');
+  const startingPrice = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const reservePrice = new BN(data.subarray(pos, pos + 8), 'le');
+  const reservePrice = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const minBidIncrement = new BN(data.subarray(pos, pos + 8), 'le');
+  const minBidIncrement = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const currentBid = new BN(data.subarray(pos, pos + 8), 'le');
+  const currentBid = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const currentBidder = new PublicKey(data.subarray(pos, pos + 32));
   pos += 32;
 
-  const startTime = new BN(data.subarray(pos, pos + 8), 'le');
+  const startTime = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const endTime = new BN(data.subarray(pos, pos + 8), 'le');
+  const endTime = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const status = data.readUInt8(pos) as AuctionStatus;
   pos += 1;
 
-  const totalBids = new BN(data.subarray(pos, pos + 8), 'le');
+  const totalBids = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const createdAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const createdAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const bump = data.readUInt8(pos);
@@ -446,10 +445,10 @@ export function deserializeBid(data: Buffer): Bid {
   const bidder = new PublicKey(data.subarray(pos, pos + 32));
   pos += 32;
 
-  const amount = new BN(data.subarray(pos, pos + 8), 'le');
+  const amount = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const timestamp = new BN(data.subarray(pos, pos + 8), 'le');
+  const timestamp = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const status = data.readUInt8(pos) as BidStatus;
@@ -480,19 +479,19 @@ export function deserializeComplianceConfig(data: Buffer): ComplianceConfig {
   const civicGatekeeperNetwork = new PublicKey(data.subarray(pos, pos + 32));
   pos += 32;
 
-  const maxTransferAmount = new BN(data.subarray(pos, pos + 8), 'le');
+  const maxTransferAmount = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const transferCooldown = new BN(data.subarray(pos, pos + 8), 'le');
+  const transferCooldown = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const isPaused = data.readUInt8(pos) === 1;
   pos += 1;
 
-  const totalWhitelisted = new BN(data.subarray(pos, pos + 8), 'le');
+  const totalWhitelisted = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const totalBlacklisted = new BN(data.subarray(pos, pos + 8), 'le');
+  const totalBlacklisted = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const bump = data.readUInt8(pos);
@@ -528,13 +527,13 @@ export function deserializeWhitelistEntry(data: Buffer): WhitelistEntry {
   const kycVerified = data.readUInt8(pos) === 1;
   pos += 1;
 
-  const kycExpiry = new BN(data.subarray(pos, pos + 8), 'le');
+  const kycExpiry = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const addedAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const addedAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
-  const lastTransfer = new BN(data.subarray(pos, pos + 8), 'le');
+  const lastTransfer = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const isActive = data.readUInt8(pos) === 1;
@@ -567,10 +566,10 @@ export function deserializeBlacklistEntry(data: Buffer): BlacklistEntry {
 
   const reasonLen = data.readUInt32LE(pos);
   pos += 4;
-  const reason = data.subarray(pos, pos + reasonLen).toString('utf8');
+  const reason = data.subarray(pos, pos + reasonLen).toString("utf8");
   pos += reasonLen;
 
-  const addedAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const addedAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const addedBy = new PublicKey(data.subarray(pos, pos + 32));
@@ -610,11 +609,11 @@ export function deserializeJurisdictionRule(data: Buffer): JurisdictionRule {
   const hasMaxAmount = data.readUInt8(pos) === 1;
   pos += 1;
   const maxAmount = hasMaxAmount
-    ? new BN(data.subarray(pos, pos + 8), 'le')
+    ? new BN(data.subarray(pos, pos + 8), "le")
     : null;
   if (hasMaxAmount) pos += 8;
 
-  const createdAt = new BN(data.subarray(pos, pos + 8), 'le');
+  const createdAt = new BN(data.subarray(pos, pos + 8), "le");
   pos += 8;
 
   const bump = data.readUInt8(pos);
@@ -640,7 +639,7 @@ export async function fetchAccount<T>(
   connection: Connection,
   address: PublicKey,
   deserializer: (data: Buffer) => T,
-  accountType: string
+  accountType: string,
 ): Promise<T> {
   const accountInfo = await connection.getAccountInfo(address);
 
@@ -657,7 +656,7 @@ export async function fetchAccount<T>(
 export async function fetchMultipleAccounts<T>(
   connection: Connection,
   addresses: PublicKey[],
-  deserializer: (data: Buffer) => T
+  deserializer: (data: Buffer) => T,
 ): Promise<(T | null)[]> {
   const accountInfos = await connection.getMultipleAccountsInfo(addresses);
 
@@ -674,7 +673,7 @@ export async function getProgramAccounts<T>(
   connection: Connection,
   programId: PublicKey,
   deserializer: (data: Buffer) => T,
-  filters: GetProgramAccountsFilter[] = []
+  filters: GetProgramAccountsFilter[] = [],
 ): Promise<{ pubkey: PublicKey; account: T }[]> {
   const accounts = await connection.getProgramAccounts(programId, {
     filters,
@@ -691,7 +690,7 @@ export async function getProgramAccounts<T>(
  */
 export function createMemcmpFilter(
   offset: number,
-  bytes: string | PublicKey
+  bytes: string | PublicKey,
 ): MemcmpFilter {
   return {
     memcmp: {
@@ -713,7 +712,7 @@ export function createDataSizeFilter(dataSize: number): DataSizeFilter {
  */
 export async function accountExists(
   connection: Connection,
-  address: PublicKey
+  address: PublicKey,
 ): Promise<boolean> {
   const accountInfo = await connection.getAccountInfo(address);
   return accountInfo !== null;
@@ -724,7 +723,7 @@ export async function accountExists(
  */
 export async function getAccountBalance(
   connection: Connection,
-  address: PublicKey
+  address: PublicKey,
 ): Promise<number> {
   return await connection.getBalance(address);
 }

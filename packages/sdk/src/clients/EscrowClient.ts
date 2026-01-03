@@ -3,20 +3,15 @@ import {
   PublicKey,
   TransactionInstruction,
   SystemProgram,
-} from '@solana/web3.js';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import BN from 'bn.js';
-import {
-  ESCROW_PROGRAM_ID,
-  TOKEN_2022_PROGRAM_ID,
-  DEFAULT_COMMITMENT,
-} from '../constants';
+} from "@solana/web3.js";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import { ESCROW_PROGRAM_ID, TOKEN_2022_PROGRAM_ID } from "../constants";
 import {
   Escrow,
   EscrowStatus,
   CreateEscrowParams,
   InvalidParameterError,
-} from '../types';
+} from "../types";
 import {
   deriveEscrow,
   deserializeEscrow,
@@ -24,13 +19,13 @@ import {
   getProgramAccounts,
   createMemcmpFilter,
   accountExists,
-} from '../utils/accounts';
+} from "../utils/accounts";
 import {
   TransactionBuilder,
   sendWithProvider,
   SendTransactionOptions,
   WalletAdapter,
-} from '../utils/transactions';
+} from "../utils/transactions";
 
 /**
  * Client for interacting with the Escrow program
@@ -65,7 +60,7 @@ export class EscrowClient {
   constructor(
     connection: Connection,
     wallet: WalletAdapter,
-    programId: PublicKey = ESCROW_PROGRAM_ID
+    programId: PublicKey = ESCROW_PROGRAM_ID,
   ) {
     this.connection = connection;
     this.wallet = wallet;
@@ -92,7 +87,7 @@ export class EscrowClient {
       this.connection,
       escrowPda,
       deserializeEscrow,
-      'Escrow'
+      "Escrow",
     );
   }
 
@@ -100,7 +95,7 @@ export class EscrowClient {
    * Get an escrow by its PDA address
    */
   async getEscrowByAddress(address: PublicKey): Promise<Escrow> {
-    return fetchAccount(this.connection, address, deserializeEscrow, 'Escrow');
+    return fetchAccount(this.connection, address, deserializeEscrow, "Escrow");
   }
 
   /**
@@ -111,7 +106,7 @@ export class EscrowClient {
       this.connection,
       this.programId,
       deserializeEscrow,
-      []
+      [],
     );
   }
 
@@ -119,13 +114,13 @@ export class EscrowClient {
    * List escrows by buyer
    */
   async listEscrowsByBuyer(
-    buyer: PublicKey
+    buyer: PublicKey,
   ): Promise<{ pubkey: PublicKey; account: Escrow }[]> {
     return getProgramAccounts(
       this.connection,
       this.programId,
       deserializeEscrow,
-      [createMemcmpFilter(8, buyer)]
+      [createMemcmpFilter(8, buyer)],
     );
   }
 
@@ -133,13 +128,13 @@ export class EscrowClient {
    * List escrows by seller
    */
   async listEscrowsBySeller(
-    seller: PublicKey
+    seller: PublicKey,
   ): Promise<{ pubkey: PublicKey; account: Escrow }[]> {
     return getProgramAccounts(
       this.connection,
       this.programId,
       deserializeEscrow,
-      [createMemcmpFilter(40, seller)] // offset 8 (discriminator) + 32 (buyer)
+      [createMemcmpFilter(40, seller)], // offset 8 (discriminator) + 32 (buyer)
     );
   }
 
@@ -147,7 +142,7 @@ export class EscrowClient {
    * List escrows by status
    */
   async listEscrowsByStatus(
-    status: EscrowStatus
+    status: EscrowStatus,
   ): Promise<{ pubkey: PublicKey; account: Escrow }[]> {
     const allEscrows = await this.listEscrows();
     return allEscrows.filter((e) => e.account.status === status);
@@ -178,18 +173,27 @@ export class EscrowClient {
    */
   async createEscrow(
     params: CreateEscrowParams,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; escrowAddress: PublicKey }> {
     if (params.assetAmount.lten(0)) {
-      throw new InvalidParameterError('assetAmount', 'Asset amount must be positive');
+      throw new InvalidParameterError(
+        "assetAmount",
+        "Asset amount must be positive",
+      );
     }
     if (params.paymentAmount.lten(0)) {
-      throw new InvalidParameterError('paymentAmount', 'Payment amount must be positive');
+      throw new InvalidParameterError(
+        "paymentAmount",
+        "Payment amount must be positive",
+      );
     }
 
     const currentTime = Math.floor(Date.now() / 1000);
     if (params.expiresAt.lten(currentTime)) {
-      throw new InvalidParameterError('expiresAt', 'Expiration time must be in the future');
+      throw new InvalidParameterError(
+        "expiresAt",
+        "Expiration time must be in the future",
+      );
     }
 
     const [escrowPda] = deriveEscrow(this.wallet.publicKey, params.assetMint);
@@ -198,7 +202,7 @@ export class EscrowClient {
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -223,18 +227,18 @@ export class EscrowClient {
     buyerPaymentAccount: PublicKey,
     escrowPaymentVault: PublicKey,
     paymentMint: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createDepositPaymentInstruction(
       assetMint,
       buyerPaymentAccount,
       escrowPaymentVault,
-      paymentMint
+      paymentMint,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -257,18 +261,18 @@ export class EscrowClient {
     assetMint: PublicKey,
     sellerAssetAccount: PublicKey,
     escrowAssetVault: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createDepositAssetInstruction(
       buyer,
       assetMint,
       sellerAssetAccount,
-      escrowAssetVault
+      escrowAssetVault,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -295,7 +299,7 @@ export class EscrowClient {
     escrowPaymentVault: PublicKey,
     buyerAssetAccount: PublicKey,
     sellerPaymentAccount: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createReleaseInstruction(
       buyer,
@@ -305,12 +309,12 @@ export class EscrowClient {
       escrowAssetVault,
       escrowPaymentVault,
       buyerAssetAccount,
-      sellerPaymentAccount
+      sellerPaymentAccount,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -337,7 +341,7 @@ export class EscrowClient {
     escrowPaymentVault: PublicKey,
     buyerPaymentAccount: PublicKey,
     sellerAssetAccount: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createRefundInstruction(
       buyer,
@@ -347,12 +351,12 @@ export class EscrowClient {
       escrowAssetVault,
       escrowPaymentVault,
       buyerPaymentAccount,
-      sellerAssetAccount
+      sellerAssetAccount,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -375,7 +379,7 @@ export class EscrowClient {
    * Create escrow instruction
    */
   private async createCreateEscrowInstruction(
-    params: CreateEscrowParams
+    params: CreateEscrowParams,
   ): Promise<TransactionInstruction> {
     const [escrowPda] = deriveEscrow(this.wallet.publicKey, params.assetMint);
 
@@ -389,15 +393,15 @@ export class EscrowClient {
     offset += 8;
 
     // Asset amount
-    params.assetAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.assetAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Payment amount
-    params.paymentAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.paymentAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Expires at
-    params.expiresAt.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.expiresAt.toArrayLike(Buffer, "le", 8).copy(data, offset);
 
     return new TransactionInstruction({
       keys: [
@@ -420,7 +424,7 @@ export class EscrowClient {
     assetMint: PublicKey,
     buyerPaymentAccount: PublicKey,
     escrowPaymentVault: PublicKey,
-    paymentMint: PublicKey
+    paymentMint: PublicKey,
   ): Promise<TransactionInstruction> {
     const [escrowPda] = deriveEscrow(this.wallet.publicKey, assetMint);
 
@@ -449,7 +453,7 @@ export class EscrowClient {
     buyer: PublicKey,
     assetMint: PublicKey,
     sellerAssetAccount: PublicKey,
-    escrowAssetVault: PublicKey
+    escrowAssetVault: PublicKey,
   ): Promise<TransactionInstruction> {
     const [escrowPda] = deriveEscrow(buyer, assetMint);
 
@@ -482,7 +486,7 @@ export class EscrowClient {
     escrowAssetVault: PublicKey,
     escrowPaymentVault: PublicKey,
     buyerAssetAccount: PublicKey,
-    sellerPaymentAccount: PublicKey
+    sellerPaymentAccount: PublicKey,
   ): Promise<TransactionInstruction> {
     const [escrowPda] = deriveEscrow(buyer, assetMint);
 
@@ -519,7 +523,7 @@ export class EscrowClient {
     escrowAssetVault: PublicKey,
     escrowPaymentVault: PublicKey,
     buyerPaymentAccount: PublicKey,
-    sellerAssetAccount: PublicKey
+    sellerAssetAccount: PublicKey,
   ): Promise<TransactionInstruction> {
     const [escrowPda] = deriveEscrow(buyer, assetMint);
 

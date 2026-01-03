@@ -10,15 +10,11 @@ import {
   ComputeBudgetProgram,
   VersionedTransaction,
   TransactionMessage,
-} from '@solana/web3.js';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import BN from 'bn.js';
-import {
-  DEFAULT_COMMITMENT,
-  MAX_COMPUTE_UNITS,
-  DEFAULT_COMPUTE_UNIT_PRICE,
-} from '../constants';
-import { TransactionError } from '../types';
+} from "@solana/web3.js";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import BN from "bn.js";
+import { DEFAULT_COMMITMENT, MAX_COMPUTE_UNITS } from "../constants";
+import { TransactionError } from "../types";
 
 /**
  * Options for building transactions
@@ -51,8 +47,12 @@ export interface SendTransactionOptions extends SendOptions {
  */
 export interface WalletAdapter {
   publicKey: PublicKey;
-  signTransaction<T extends Transaction | VersionedTransaction>(tx: T): Promise<T>;
-  signAllTransactions?<T extends Transaction | VersionedTransaction>(txs: T[]): Promise<T[]>;
+  signTransaction<T extends Transaction | VersionedTransaction>(
+    tx: T,
+  ): Promise<T>;
+  signAllTransactions?<T extends Transaction | VersionedTransaction>(
+    txs: T[],
+  ): Promise<T[]>;
 }
 
 /**
@@ -65,7 +65,7 @@ export class TransactionBuilder {
   constructor(
     private connection: Connection,
     private payer: PublicKey,
-    private options: TransactionBuilderOptions = {}
+    private options: TransactionBuilderOptions = {},
   ) {}
 
   /**
@@ -111,7 +111,7 @@ export class TransactionBuilder {
       transaction.add(
         ComputeBudgetProgram.setComputeUnitLimit({
           units: this.options.computeUnitLimit,
-        })
+        }),
       );
     }
 
@@ -119,16 +119,16 @@ export class TransactionBuilder {
       transaction.add(
         ComputeBudgetProgram.setComputeUnitPrice({
           microLamports: this.options.computeUnitPrice,
-        })
+        }),
       );
     } else if (this.options.priorityFee !== undefined) {
       // Calculate micro-lamports from priority fee
       const microLamports = Math.ceil(
         (this.options.priorityFee * 1_000_000) /
-          (this.options.computeUnitLimit ?? MAX_COMPUTE_UNITS)
+          (this.options.computeUnitLimit ?? MAX_COMPUTE_UNITS),
       );
       transaction.add(
-        ComputeBudgetProgram.setComputeUnitPrice({ microLamports })
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports }),
       );
     }
 
@@ -164,7 +164,7 @@ export class TransactionBuilder {
       instructions.push(
         ComputeBudgetProgram.setComputeUnitLimit({
           units: this.options.computeUnitLimit,
-        })
+        }),
       );
     }
 
@@ -172,7 +172,7 @@ export class TransactionBuilder {
       instructions.push(
         ComputeBudgetProgram.setComputeUnitPrice({
           microLamports: this.options.computeUnitPrice,
-        })
+        }),
       );
     }
 
@@ -240,13 +240,9 @@ export async function sendAndConfirmTransaction(
   connection: Connection,
   transaction: Transaction,
   signers: Signer[],
-  options: SendTransactionOptions = {}
+  options: SendTransactionOptions = {},
 ): Promise<TransactionSignature> {
-  const {
-    confirmations = 1,
-    timeout = 60000,
-    ...sendOptions
-  } = options;
+  const { confirmations = 1, timeout = 60000, ...sendOptions } = options;
 
   try {
     // Sign the transaction
@@ -261,7 +257,7 @@ export async function sendAndConfirmTransaction(
         skipPreflight: false,
         preflightCommitment: DEFAULT_COMMITMENT,
         ...sendOptions,
-      }
+      },
     );
 
     // Confirm the transaction
@@ -274,7 +270,7 @@ export async function sendAndConfirmTransaction(
       if (status.value?.err) {
         throw new TransactionError(
           `Transaction failed: ${JSON.stringify(status.value.err)}`,
-          signature
+          signature,
         );
       }
 
@@ -285,7 +281,8 @@ export async function sendAndConfirmTransaction(
           finalized: 3,
         };
 
-        const currentLevel = confirmationLevels[status.value.confirmationStatus] ?? 0;
+        const currentLevel =
+          confirmationLevels[status.value.confirmationStatus] ?? 0;
         if (currentLevel >= confirmations) {
           confirmed = true;
         }
@@ -297,10 +294,7 @@ export async function sendAndConfirmTransaction(
     }
 
     if (!confirmed) {
-      throw new TransactionError(
-        'Transaction confirmation timeout',
-        signature
-      );
+      throw new TransactionError("Transaction confirmation timeout", signature);
     }
 
     return signature;
@@ -311,7 +305,7 @@ export async function sendAndConfirmTransaction(
     throw new TransactionError(
       `Failed to send transaction: ${(error as Error).message}`,
       undefined,
-      error
+      error,
     );
   }
 }
@@ -323,7 +317,7 @@ export async function sendWithProvider(
   provider: AnchorProvider,
   transaction: Transaction,
   signers: Signer[] = [],
-  options: SendTransactionOptions = {}
+  options: SendTransactionOptions = {},
 ): Promise<TransactionSignature> {
   try {
     // Sign with additional signers
@@ -342,7 +336,7 @@ export async function sendWithProvider(
     throw new TransactionError(
       `Failed to send transaction: ${(error as Error).message}`,
       undefined,
-      error
+      error,
     );
   }
 }
@@ -353,7 +347,7 @@ export async function sendWithProvider(
 export async function estimateTransactionFee(
   connection: Connection,
   transaction: Transaction,
-  signers: Signer[] = []
+  signers: Signer[] = [],
 ): Promise<number> {
   // Ensure transaction has a recent blockhash
   if (!transaction.recentBlockhash) {
@@ -365,9 +359,9 @@ export async function estimateTransactionFee(
   if (signers.length > 0) {
     const signedTransaction = Transaction.from(transaction.serialize());
     signedTransaction.partialSign(...signers);
-    
+
     const fee = await connection.getFeeForMessage(
-      signedTransaction.compileMessage()
+      signedTransaction.compileMessage(),
     );
     return fee.value ?? 0;
   }
@@ -381,7 +375,7 @@ export async function estimateTransactionFee(
 export async function getOptimalComputeUnits(
   connection: Connection,
   transaction: Transaction,
-  payer: PublicKey
+  _payer: PublicKey,
 ): Promise<number> {
   try {
     // Simulate the transaction to get compute units used
@@ -408,7 +402,7 @@ export async function waitForConfirmation(
   connection: Connection,
   signature: TransactionSignature,
   commitment: Commitment = DEFAULT_COMMITMENT,
-  timeout: number = 60000
+  timeout: number = 60000,
 ): Promise<void> {
   const startTime = Date.now();
 
@@ -418,7 +412,7 @@ export async function waitForConfirmation(
     if (status.value?.err) {
       throw new TransactionError(
         `Transaction failed: ${JSON.stringify(status.value.err)}`,
-        signature
+        signature,
       );
     }
 
@@ -429,7 +423,7 @@ export async function waitForConfirmation(
     await sleep(500);
   }
 
-  throw new TransactionError('Transaction confirmation timeout', signature);
+  throw new TransactionError("Transaction confirmation timeout", signature);
 }
 
 /**
@@ -443,7 +437,7 @@ export async function batchSendTransactions(
     batchSize?: number;
     delayMs?: number;
     onProgress?: (completed: number, total: number) => void;
-  } = {}
+  } = {},
 ): Promise<TransactionSignature[]> {
   const { batchSize = 10, delayMs = 500, onProgress } = options;
   const signatures: TransactionSignature[] = [];
@@ -454,14 +448,17 @@ export async function batchSendTransactions(
 
     const results = await Promise.all(
       batch.map((tx, idx) =>
-        sendAndConfirmTransaction(connection, tx, batchSigners[idx] ?? [])
-      )
+        sendAndConfirmTransaction(connection, tx, batchSigners[idx] ?? []),
+      ),
     );
 
     signatures.push(...results);
 
     if (onProgress) {
-      onProgress(Math.min(i + batchSize, transactions.length), transactions.length);
+      onProgress(
+        Math.min(i + batchSize, transactions.length),
+        transactions.length,
+      );
     }
 
     // Delay between batches to avoid rate limiting
@@ -484,7 +481,7 @@ function sleep(ms: number): Promise<void> {
  * Convert a number to BN with optional decimals
  */
 export function toBN(value: number | string, decimals: number = 0): BN {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     value = parseFloat(value);
   }
   const multiplier = Math.pow(10, decimals);
@@ -503,8 +500,8 @@ export function fromBN(value: BN, decimals: number = 0): number {
  * Format a BN value as a string with decimals
  */
 export function formatBN(value: BN, decimals: number = 0): string {
-  const str = value.toString().padStart(decimals + 1, '0');
-  const integerPart = str.slice(0, -decimals) || '0';
+  const str = value.toString().padStart(decimals + 1, "0");
+  const integerPart = str.slice(0, -decimals) || "0";
   const decimalPart = str.slice(-decimals);
   return decimals > 0 ? `${integerPart}.${decimalPart}` : integerPart;
 }

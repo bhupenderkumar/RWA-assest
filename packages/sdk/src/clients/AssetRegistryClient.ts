@@ -4,17 +4,16 @@ import {
   Keypair,
   TransactionInstruction,
   SystemProgram,
-} from '@solana/web3.js';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import BN from 'bn.js';
+} from "@solana/web3.js";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import BN from "bn.js";
 import {
   ASSET_REGISTRY_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
-  DEFAULT_COMMITMENT,
   MAX_ASSET_NAME_LENGTH,
   MAX_SYMBOL_LENGTH,
   MAX_URI_LENGTH,
-} from '../constants';
+} from "../constants";
 import {
   Config,
   Asset,
@@ -25,7 +24,7 @@ import {
   UpdateAssetParams,
   CreateTokenMintParams,
   InvalidParameterError,
-} from '../types';
+} from "../types";
 import {
   deriveAssetRegistryConfig,
   deriveAsset,
@@ -38,13 +37,13 @@ import {
   getProgramAccounts,
   createMemcmpFilter,
   accountExists,
-} from '../utils/accounts';
+} from "../utils/accounts";
 import {
   TransactionBuilder,
   sendWithProvider,
   SendTransactionOptions,
   WalletAdapter,
-} from '../utils/transactions';
+} from "../utils/transactions";
 
 /**
  * Client for interacting with the Asset Registry program
@@ -72,7 +71,7 @@ export class AssetRegistryClient {
   constructor(
     connection: Connection,
     wallet: WalletAdapter,
-    programId: PublicKey = ASSET_REGISTRY_PROGRAM_ID
+    programId: PublicKey = ASSET_REGISTRY_PROGRAM_ID,
   ) {
     this.connection = connection;
     this.wallet = wallet;
@@ -99,7 +98,7 @@ export class AssetRegistryClient {
       this.connection,
       configPda,
       deserializeConfig,
-      'Config'
+      "Config",
     );
   }
 
@@ -108,14 +107,14 @@ export class AssetRegistryClient {
    */
   async getAsset(mint: PublicKey): Promise<Asset> {
     const [assetPda] = deriveAsset(mint);
-    return fetchAccount(this.connection, assetPda, deserializeAsset, 'Asset');
+    return fetchAccount(this.connection, assetPda, deserializeAsset, "Asset");
   }
 
   /**
    * Get an asset by its PDA address
    */
   async getAssetByAddress(address: PublicKey): Promise<Asset> {
-    return fetchAccount(this.connection, address, deserializeAsset, 'Asset');
+    return fetchAccount(this.connection, address, deserializeAsset, "Asset");
   }
 
   /**
@@ -127,7 +126,7 @@ export class AssetRegistryClient {
       this.connection,
       mintConfigPda,
       deserializeMintConfig,
-      'MintConfig'
+      "MintConfig",
     );
   }
 
@@ -142,7 +141,7 @@ export class AssetRegistryClient {
       [
         // Filter by account discriminator (first 8 bytes)
         // Asset discriminator can be derived from the account name hash
-      ]
+      ],
     );
   }
 
@@ -150,7 +149,7 @@ export class AssetRegistryClient {
    * List assets by authority
    */
   async listAssetsByAuthority(
-    authority: PublicKey
+    authority: PublicKey,
   ): Promise<{ pubkey: PublicKey; account: Asset }[]> {
     return getProgramAccounts(
       this.connection,
@@ -159,7 +158,7 @@ export class AssetRegistryClient {
       [
         // Filter by authority at offset 8 (after discriminator)
         createMemcmpFilter(8, authority),
-      ]
+      ],
     );
   }
 
@@ -167,7 +166,7 @@ export class AssetRegistryClient {
    * List assets by status
    */
   async listAssetsByStatus(
-    status: AssetStatus
+    status: AssetStatus,
   ): Promise<{ pubkey: PublicKey; account: Asset }[]> {
     const allAssets = await this.listAssets();
     return allAssets.filter((a) => a.account.status === status);
@@ -177,7 +176,7 @@ export class AssetRegistryClient {
    * List assets by type
    */
   async listAssetsByType(
-    assetType: AssetType
+    assetType: AssetType,
   ): Promise<{ pubkey: PublicKey; account: Asset }[]> {
     const allAssets = await this.listAssets();
     return allAssets.filter((a) => a.account.assetType === assetType);
@@ -215,12 +214,12 @@ export class AssetRegistryClient {
    */
   async initialize(
     platformFeeBps: number,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     if (platformFeeBps < 0 || platformFeeBps > 10000) {
       throw new InvalidParameterError(
-        'platformFeeBps',
-        'Platform fee must be between 0 and 10000 basis points'
+        "platformFeeBps",
+        "Platform fee must be between 0 and 10000 basis points",
       );
     }
 
@@ -228,16 +227,16 @@ export class AssetRegistryClient {
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     // Send without provider
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
@@ -250,41 +249,50 @@ export class AssetRegistryClient {
   async registerAsset(
     params: RegisterAssetParams,
     mint: Keypair,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; assetAddress: PublicKey }> {
     // Validate parameters
     if (params.name.length > MAX_ASSET_NAME_LENGTH) {
       throw new InvalidParameterError(
-        'name',
-        `Asset name must be at most ${MAX_ASSET_NAME_LENGTH} characters`
+        "name",
+        `Asset name must be at most ${MAX_ASSET_NAME_LENGTH} characters`,
       );
     }
     if (params.metadataUri.length > MAX_URI_LENGTH) {
       throw new InvalidParameterError(
-        'metadataUri',
-        `Metadata URI must be at most ${MAX_URI_LENGTH} characters`
+        "metadataUri",
+        `Metadata URI must be at most ${MAX_URI_LENGTH} characters`,
       );
     }
     if (params.totalValue.lten(0)) {
-      throw new InvalidParameterError('totalValue', 'Total value must be positive');
+      throw new InvalidParameterError(
+        "totalValue",
+        "Total value must be positive",
+      );
     }
     if (params.totalSupply.lten(0)) {
-      throw new InvalidParameterError('totalSupply', 'Total supply must be positive');
+      throw new InvalidParameterError(
+        "totalSupply",
+        "Total supply must be positive",
+      );
     }
 
     const [assetPda] = deriveAsset(mint.publicKey);
 
-    const ix = await this.createRegisterAssetInstruction(params, mint.publicKey);
+    const ix = await this.createRegisterAssetInstruction(
+      params,
+      mint.publicKey,
+    );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
     builder.addSigner(mint);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     let signature: string;
     if (this.provider) {
       signature = await sendWithProvider(this.provider, tx, [mint], options);
@@ -302,32 +310,35 @@ export class AssetRegistryClient {
   async updateAsset(
     mint: PublicKey,
     params: UpdateAssetParams,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     if (params.metadataUri && params.metadataUri.length > MAX_URI_LENGTH) {
       throw new InvalidParameterError(
-        'metadataUri',
-        `Metadata URI must be at most ${MAX_URI_LENGTH} characters`
+        "metadataUri",
+        `Metadata URI must be at most ${MAX_URI_LENGTH} characters`,
       );
     }
     if (params.totalValue && params.totalValue.lten(0)) {
-      throw new InvalidParameterError('totalValue', 'Total value must be positive');
+      throw new InvalidParameterError(
+        "totalValue",
+        "Total value must be positive",
+      );
     }
 
     const ix = await this.createUpdateAssetInstruction(mint, params);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
     return signature;
@@ -338,22 +349,22 @@ export class AssetRegistryClient {
    */
   async activateAsset(
     mint: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createActivateAssetInstruction(mint);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
     return signature;
@@ -364,22 +375,22 @@ export class AssetRegistryClient {
    */
   async freezeAsset(
     mint: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createFreezeAssetInstruction(mint);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
     return signature;
@@ -390,22 +401,22 @@ export class AssetRegistryClient {
    */
   async unfreezeAsset(
     mint: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createUnfreezeAssetInstruction(mint);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
     return signature;
@@ -416,22 +427,22 @@ export class AssetRegistryClient {
    */
   async burnAsset(
     mint: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createBurnAssetInstruction(mint);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
     return signature;
@@ -444,36 +455,42 @@ export class AssetRegistryClient {
     params: CreateTokenMintParams,
     mint: Keypair,
     permanentDelegate: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; mintAddress: PublicKey }> {
     if (params.name.length > 32) {
-      throw new InvalidParameterError('name', 'Token name must be at most 32 characters');
+      throw new InvalidParameterError(
+        "name",
+        "Token name must be at most 32 characters",
+      );
     }
     if (params.symbol.length > MAX_SYMBOL_LENGTH) {
       throw new InvalidParameterError(
-        'symbol',
-        `Token symbol must be at most ${MAX_SYMBOL_LENGTH} characters`
+        "symbol",
+        `Token symbol must be at most ${MAX_SYMBOL_LENGTH} characters`,
       );
     }
     if (params.uri.length > 200) {
-      throw new InvalidParameterError('uri', 'URI must be at most 200 characters');
+      throw new InvalidParameterError(
+        "uri",
+        "URI must be at most 200 characters",
+      );
     }
 
     const ix = await this.createTokenMintInstruction(
       params,
       mint.publicKey,
-      permanentDelegate
+      permanentDelegate,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
     builder.addSigner(mint);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     let signature: string;
     if (this.provider) {
       signature = await sendWithProvider(this.provider, tx, [mint], options);
@@ -493,27 +510,27 @@ export class AssetRegistryClient {
     recipient: PublicKey,
     recipientTokenAccount: PublicKey,
     amount: BN,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createMintTokensInstruction(
       mint,
       recipient,
       recipientTokenAccount,
-      amount
+      amount,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
     const tx = await builder.buildAndSign(this.wallet);
-    
+
     if (this.provider) {
       return sendWithProvider(this.provider, tx, [], options);
     }
-    
+
     const signature = await this.connection.sendRawTransaction(tx.serialize());
     await this.connection.confirmTransaction(signature);
     return signature;
@@ -527,7 +544,7 @@ export class AssetRegistryClient {
    * Create initialize instruction
    */
   private async createInitializeInstruction(
-    platformFeeBps: number
+    platformFeeBps: number,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveAssetRegistryConfig();
 
@@ -555,22 +572,24 @@ export class AssetRegistryClient {
    */
   private async createRegisterAssetInstruction(
     params: RegisterAssetParams,
-    mint: PublicKey
+    mint: PublicKey,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveAssetRegistryConfig();
     const [assetPda] = deriveAsset(mint);
 
     // Serialize instruction data
-    const nameBytes = Buffer.from(params.name, 'utf8');
-    const uriBytes = Buffer.from(params.metadataUri, 'utf8');
+    const nameBytes = Buffer.from(params.name, "utf8");
+    const uriBytes = Buffer.from(params.metadataUri, "utf8");
 
     const dataSize =
       8 + // discriminator
-      4 + nameBytes.length + // name (string)
+      4 +
+      nameBytes.length + // name (string)
       1 + // asset_type (enum)
       8 + // total_value
       8 + // total_supply
-      4 + uriBytes.length; // metadata_uri (string)
+      4 +
+      uriBytes.length; // metadata_uri (string)
 
     const data = Buffer.alloc(dataSize);
     let offset = 0;
@@ -591,11 +610,11 @@ export class AssetRegistryClient {
     offset += 1;
 
     // Total value
-    params.totalValue.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.totalValue.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Total supply
-    params.totalSupply.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.totalSupply.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Metadata URI
@@ -621,17 +640,21 @@ export class AssetRegistryClient {
    */
   private async createUpdateAssetInstruction(
     mint: PublicKey,
-    params: UpdateAssetParams
+    params: UpdateAssetParams,
   ): Promise<TransactionInstruction> {
     const [assetPda] = deriveAsset(mint);
 
     // Serialize instruction data
-    const uriBytes = params.metadataUri ? Buffer.from(params.metadataUri, 'utf8') : null;
+    const uriBytes = params.metadataUri
+      ? Buffer.from(params.metadataUri, "utf8")
+      : null;
 
     const dataSize =
       8 + // discriminator
-      1 + (uriBytes ? 4 + uriBytes.length : 0) + // optional metadata_uri
-      1 + (params.totalValue ? 8 : 0); // optional total_value
+      1 +
+      (uriBytes ? 4 + uriBytes.length : 0) + // optional metadata_uri
+      1 +
+      (params.totalValue ? 8 : 0); // optional total_value
 
     const data = Buffer.alloc(dataSize);
     let offset = 0;
@@ -658,7 +681,7 @@ export class AssetRegistryClient {
     if (params.totalValue) {
       data.writeUInt8(1, offset);
       offset += 1;
-      params.totalValue.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+      params.totalValue.toArrayLike(Buffer, "le", 8).copy(data, offset);
     } else {
       data.writeUInt8(0, offset);
     }
@@ -677,7 +700,7 @@ export class AssetRegistryClient {
    * Create activate asset instruction
    */
   private async createActivateAssetInstruction(
-    mint: PublicKey
+    mint: PublicKey,
   ): Promise<TransactionInstruction> {
     const [assetPda] = deriveAsset(mint);
 
@@ -700,7 +723,7 @@ export class AssetRegistryClient {
    * Create freeze asset instruction
    */
   private async createFreezeAssetInstruction(
-    mint: PublicKey
+    mint: PublicKey,
   ): Promise<TransactionInstruction> {
     const [assetPda] = deriveAsset(mint);
 
@@ -722,7 +745,7 @@ export class AssetRegistryClient {
    * Create unfreeze asset instruction
    */
   private async createUnfreezeAssetInstruction(
-    mint: PublicKey
+    mint: PublicKey,
   ): Promise<TransactionInstruction> {
     const [assetPda] = deriveAsset(mint);
 
@@ -744,7 +767,7 @@ export class AssetRegistryClient {
    * Create burn asset instruction
    */
   private async createBurnAssetInstruction(
-    mint: PublicKey
+    mint: PublicKey,
   ): Promise<TransactionInstruction> {
     const [assetPda] = deriveAsset(mint);
     const [configPda] = deriveAssetRegistryConfig();
@@ -770,22 +793,26 @@ export class AssetRegistryClient {
   private async createTokenMintInstruction(
     params: CreateTokenMintParams,
     mint: PublicKey,
-    permanentDelegate: PublicKey
+    permanentDelegate: PublicKey,
   ): Promise<TransactionInstruction> {
     const [mintConfigPda] = deriveMintConfig(mint);
     const [mintAuthority] = deriveMintAuthority(mint);
 
-    const nameBytes = Buffer.from(params.name, 'utf8');
-    const symbolBytes = Buffer.from(params.symbol, 'utf8');
-    const uriBytes = Buffer.from(params.uri, 'utf8');
+    const nameBytes = Buffer.from(params.name, "utf8");
+    const symbolBytes = Buffer.from(params.symbol, "utf8");
+    const uriBytes = Buffer.from(params.uri, "utf8");
 
     const dataSize =
       8 + // discriminator
-      4 + nameBytes.length + // name
-      4 + symbolBytes.length + // symbol
-      4 + uriBytes.length + // uri
+      4 +
+      nameBytes.length + // name
+      4 +
+      symbolBytes.length + // symbol
+      4 +
+      uriBytes.length + // uri
       1 + // decimals
-      1 + (params.transferHookProgram ? 32 : 0); // optional transfer hook
+      1 +
+      (params.transferHookProgram ? 32 : 0); // optional transfer hook
 
     const data = Buffer.alloc(dataSize);
     let offset = 0;
@@ -847,7 +874,7 @@ export class AssetRegistryClient {
     mint: PublicKey,
     recipient: PublicKey,
     recipientTokenAccount: PublicKey,
-    amount: BN
+    amount: BN,
   ): Promise<TransactionInstruction> {
     const [mintConfigPda] = deriveMintConfig(mint);
     const [mintAuthority] = deriveMintAuthority(mint);
@@ -855,7 +882,7 @@ export class AssetRegistryClient {
     const data = Buffer.alloc(16);
     const discriminator = Buffer.from([59, 132, 24, 246, 122, 115, 207, 87]);
     discriminator.copy(data, 0);
-    amount.toArrayLike(Buffer, 'le', 8).copy(data, 8);
+    amount.toArrayLike(Buffer, "le", 8).copy(data, 8);
 
     return new TransactionInstruction({
       keys: [

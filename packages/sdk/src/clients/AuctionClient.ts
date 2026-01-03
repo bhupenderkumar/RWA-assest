@@ -3,24 +3,23 @@ import {
   PublicKey,
   TransactionInstruction,
   SystemProgram,
-} from '@solana/web3.js';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import BN from 'bn.js';
+} from "@solana/web3.js";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import BN from "bn.js";
 import {
   AUCTION_PROGRAM_ID,
   TOKEN_2022_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   MIN_AUCTION_DURATION,
-} from '../constants';
+} from "../constants";
 import {
   Auction,
   Bid,
   AuctionStatus,
-  BidStatus,
   CreateAuctionParams,
   PlaceBidParams,
   InvalidParameterError,
-} from '../types';
+} from "../types";
 import {
   deriveAuction,
   deriveBid,
@@ -30,13 +29,13 @@ import {
   getProgramAccounts,
   createMemcmpFilter,
   accountExists,
-} from '../utils/accounts';
+} from "../utils/accounts";
 import {
   TransactionBuilder,
   sendWithProvider,
   SendTransactionOptions,
   WalletAdapter,
-} from '../utils/transactions';
+} from "../utils/transactions";
 
 /**
  * Client for interacting with the Auction program
@@ -73,7 +72,7 @@ export class AuctionClient {
   constructor(
     connection: Connection,
     wallet: WalletAdapter,
-    programId: PublicKey = AUCTION_PROGRAM_ID
+    programId: PublicKey = AUCTION_PROGRAM_ID,
   ) {
     this.connection = connection;
     this.wallet = wallet;
@@ -97,14 +96,14 @@ export class AuctionClient {
   async getAuction(
     seller: PublicKey,
     assetMint: PublicKey,
-    createdAt: BN
+    createdAt: BN,
   ): Promise<Auction> {
     const [auctionPda] = deriveAuction(seller, assetMint, createdAt);
     return fetchAccount(
       this.connection,
       auctionPda,
       deserializeAuction,
-      'Auction'
+      "Auction",
     );
   }
 
@@ -112,7 +111,12 @@ export class AuctionClient {
    * Get an auction by its PDA address
    */
   async getAuctionByAddress(address: PublicKey): Promise<Auction> {
-    return fetchAccount(this.connection, address, deserializeAuction, 'Auction');
+    return fetchAccount(
+      this.connection,
+      address,
+      deserializeAuction,
+      "Auction",
+    );
   }
 
   /**
@@ -150,7 +154,7 @@ export class AuctionClient {
    */
   async getBid(auction: PublicKey, bidder: PublicKey): Promise<Bid> {
     const [bidPda] = deriveBid(auction, bidder);
-    return fetchAccount(this.connection, bidPda, deserializeBid, 'Bid');
+    return fetchAccount(this.connection, bidPda, deserializeBid, "Bid");
   }
 
   /**
@@ -161,7 +165,7 @@ export class AuctionClient {
       this.connection,
       this.programId,
       deserializeAuction,
-      []
+      [],
     );
   }
 
@@ -169,20 +173,22 @@ export class AuctionClient {
    * List auctions by seller
    */
   async listAuctionsBySeller(
-    seller: PublicKey
+    seller: PublicKey,
   ): Promise<{ pubkey: PublicKey; account: Auction }[]> {
     return getProgramAccounts(
       this.connection,
       this.programId,
       deserializeAuction,
-      [createMemcmpFilter(8, seller)]
+      [createMemcmpFilter(8, seller)],
     );
   }
 
   /**
    * List active auctions
    */
-  async listActiveAuctions(): Promise<{ pubkey: PublicKey; account: Auction }[]> {
+  async listActiveAuctions(): Promise<
+    { pubkey: PublicKey; account: Auction }[]
+  > {
     const allAuctions = await this.listAuctions();
     const currentTime = Math.floor(Date.now() / 1000);
 
@@ -190,7 +196,7 @@ export class AuctionClient {
       (a) =>
         a.account.status === AuctionStatus.Active &&
         currentTime >= a.account.startTime.toNumber() &&
-        currentTime < a.account.endTime.toNumber()
+        currentTime < a.account.endTime.toNumber(),
     );
   }
 
@@ -198,7 +204,7 @@ export class AuctionClient {
    * List auctions by status
    */
   async listAuctionsByStatus(
-    status: AuctionStatus
+    status: AuctionStatus,
   ): Promise<{ pubkey: PublicKey; account: Auction }[]> {
     const allAuctions = await this.listAuctions();
     return allAuctions.filter((a) => a.account.status === status);
@@ -208,7 +214,7 @@ export class AuctionClient {
    * List bids for an auction
    */
   async listBidsForAuction(
-    auction: PublicKey
+    auction: PublicKey,
   ): Promise<{ pubkey: PublicKey; account: Bid }[]> {
     return getProgramAccounts(this.connection, this.programId, deserializeBid, [
       createMemcmpFilter(8, auction),
@@ -219,7 +225,7 @@ export class AuctionClient {
    * List bids by bidder
    */
   async listBidsByBidder(
-    bidder: PublicKey
+    bidder: PublicKey,
   ): Promise<{ pubkey: PublicKey; account: Bid }[]> {
     return getProgramAccounts(this.connection, this.programId, deserializeBid, [
       createMemcmpFilter(40, bidder), // offset 8 + 32
@@ -232,7 +238,7 @@ export class AuctionClient {
   async auctionExists(
     seller: PublicKey,
     assetMint: PublicKey,
-    createdAt: BN
+    createdAt: BN,
   ): Promise<boolean> {
     const [auctionPda] = deriveAuction(seller, assetMint, createdAt);
     return accountExists(this.connection, auctionPda);
@@ -244,7 +250,7 @@ export class AuctionClient {
   getAuctionAddress(
     seller: PublicKey,
     assetMint: PublicKey,
-    createdAt: BN
+    createdAt: BN,
   ): PublicKey {
     const [auctionPda] = deriveAuction(seller, assetMint, createdAt);
     return auctionPda;
@@ -268,41 +274,53 @@ export class AuctionClient {
   async createAuction(
     params: CreateAuctionParams,
     sellerAssetAccount: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; auctionAddress: PublicKey; createdAt: BN }> {
     // Validate parameters
     if (params.assetAmount.lten(0)) {
-      throw new InvalidParameterError('assetAmount', 'Asset amount must be positive');
+      throw new InvalidParameterError(
+        "assetAmount",
+        "Asset amount must be positive",
+      );
     }
     if (params.startingPrice.lten(0)) {
-      throw new InvalidParameterError('startingPrice', 'Starting price must be positive');
+      throw new InvalidParameterError(
+        "startingPrice",
+        "Starting price must be positive",
+      );
     }
     if (params.reservePrice.lt(params.startingPrice)) {
       throw new InvalidParameterError(
-        'reservePrice',
-        'Reserve price must be >= starting price'
+        "reservePrice",
+        "Reserve price must be >= starting price",
       );
     }
     if (params.minBidIncrement.lten(0)) {
       throw new InvalidParameterError(
-        'minBidIncrement',
-        'Minimum bid increment must be positive'
+        "minBidIncrement",
+        "Minimum bid increment must be positive",
       );
     }
 
     const currentTime = Math.floor(Date.now() / 1000);
     if (params.startTime.ltn(currentTime)) {
-      throw new InvalidParameterError('startTime', 'Start time must be in the future');
+      throw new InvalidParameterError(
+        "startTime",
+        "Start time must be in the future",
+      );
     }
     if (params.endTime.lte(params.startTime)) {
-      throw new InvalidParameterError('endTime', 'End time must be after start time');
+      throw new InvalidParameterError(
+        "endTime",
+        "End time must be after start time",
+      );
     }
 
     const duration = params.endTime.sub(params.startTime).toNumber();
     if (duration < MIN_AUCTION_DURATION) {
       throw new InvalidParameterError(
-        'endTime',
-        `Auction duration must be at least ${MIN_AUCTION_DURATION} seconds`
+        "endTime",
+        `Auction duration must be at least ${MIN_AUCTION_DURATION} seconds`,
       );
     }
 
@@ -310,18 +328,18 @@ export class AuctionClient {
     const [auctionPda] = deriveAuction(
       this.wallet.publicKey,
       params.assetMint,
-      createdAt
+      createdAt,
     );
 
     const ix = await this.createCreateAuctionInstruction(
       params,
       sellerAssetAccount,
-      createdAt
+      createdAt,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -347,10 +365,13 @@ export class AuctionClient {
     auctionPaymentVault: PublicKey,
     paymentMint: PublicKey,
     previousBidderPaymentAccount: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; bidAddress: PublicKey }> {
     if (params.bidAmount.lten(0)) {
-      throw new InvalidParameterError('bidAmount', 'Bid amount must be positive');
+      throw new InvalidParameterError(
+        "bidAmount",
+        "Bid amount must be positive",
+      );
     }
 
     const [bidPda] = deriveBid(params.auction, this.wallet.publicKey);
@@ -360,12 +381,12 @@ export class AuctionClient {
       bidderPaymentAccount,
       auctionPaymentVault,
       paymentMint,
-      previousBidderPaymentAccount
+      previousBidderPaymentAccount,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -387,7 +408,7 @@ export class AuctionClient {
    */
   async cancelBid(
     auction: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const [bidPda] = deriveBid(auction, this.wallet.publicKey);
 
@@ -395,7 +416,7 @@ export class AuctionClient {
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -422,7 +443,7 @@ export class AuctionClient {
     winnerPaymentAccount: PublicKey,
     sellerAssetAccount: PublicKey,
     sellerPaymentAccount: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createSettleAuctionInstruction(
       auction,
@@ -432,12 +453,12 @@ export class AuctionClient {
       winnerAssetAccount,
       winnerPaymentAccount,
       sellerAssetAccount,
-      sellerPaymentAccount
+      sellerPaymentAccount,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -460,18 +481,18 @@ export class AuctionClient {
     auctionData: Auction,
     auctionAssetVault: PublicKey,
     sellerAssetAccount: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createCancelAuctionInstruction(
       auction,
       auctionData,
       auctionAssetVault,
-      sellerAssetAccount
+      sellerAssetAccount,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -492,13 +513,13 @@ export class AuctionClient {
   async extendAuction(
     auction: PublicKey,
     newEndTime: BN,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createExtendAuctionInstruction(auction, newEndTime);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -523,12 +544,12 @@ export class AuctionClient {
   private async createCreateAuctionInstruction(
     params: CreateAuctionParams,
     sellerAssetAccount: PublicKey,
-    createdAt: BN
+    createdAt: BN,
   ): Promise<TransactionInstruction> {
     const [auctionPda] = deriveAuction(
       this.wallet.publicKey,
       params.assetMint,
-      createdAt
+      createdAt,
     );
 
     // Build instruction data
@@ -541,27 +562,27 @@ export class AuctionClient {
     offset += 8;
 
     // Asset amount
-    params.assetAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.assetAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Starting price
-    params.startingPrice.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.startingPrice.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Reserve price
-    params.reservePrice.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.reservePrice.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Min bid increment
-    params.minBidIncrement.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.minBidIncrement.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Start time
-    params.startTime.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.startTime.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // End time
-    params.endTime.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.endTime.toArrayLike(Buffer, "le", 8).copy(data, offset);
 
     return new TransactionInstruction({
       keys: [
@@ -572,7 +593,11 @@ export class AuctionClient {
         { pubkey: sellerAssetAccount, isSigner: false, isWritable: true },
         // Auction asset vault (ATA for auction PDA)
         { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-        { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+        {
+          pubkey: ASSOCIATED_TOKEN_PROGRAM_ID,
+          isSigner: false,
+          isWritable: false,
+        },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
       programId: this.programId,
@@ -588,7 +613,7 @@ export class AuctionClient {
     bidderPaymentAccount: PublicKey,
     auctionPaymentVault: PublicKey,
     paymentMint: PublicKey,
-    previousBidderPaymentAccount: PublicKey
+    previousBidderPaymentAccount: PublicKey,
   ): Promise<TransactionInstruction> {
     const [bidPda] = deriveBid(params.auction, this.wallet.publicKey);
 
@@ -601,7 +626,7 @@ export class AuctionClient {
     offset += 8;
 
     // Bid amount
-    params.bidAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.bidAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
 
     return new TransactionInstruction({
       keys: [
@@ -611,7 +636,11 @@ export class AuctionClient {
         { pubkey: paymentMint, isSigner: false, isWritable: false },
         { pubkey: bidderPaymentAccount, isSigner: false, isWritable: true },
         { pubkey: auctionPaymentVault, isSigner: false, isWritable: true },
-        { pubkey: previousBidderPaymentAccount, isSigner: false, isWritable: true },
+        {
+          pubkey: previousBidderPaymentAccount,
+          isSigner: false,
+          isWritable: true,
+        },
         { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
@@ -625,7 +654,7 @@ export class AuctionClient {
    */
   private async createCancelBidInstruction(
     auction: PublicKey,
-    bid: PublicKey
+    bid: PublicKey,
   ): Promise<TransactionInstruction> {
     const data = Buffer.alloc(8);
     const discriminator = Buffer.from([64, 99, 116, 233, 95, 11, 53, 209]);
@@ -653,7 +682,7 @@ export class AuctionClient {
     winnerAssetAccount: PublicKey,
     winnerPaymentAccount: PublicKey,
     sellerAssetAccount: PublicKey,
-    sellerPaymentAccount: PublicKey
+    sellerPaymentAccount: PublicKey,
   ): Promise<TransactionInstruction> {
     const data = Buffer.alloc(8);
     const discriminator = Buffer.from([102, 182, 109, 166, 37, 35, 254, 167]);
@@ -685,7 +714,7 @@ export class AuctionClient {
     auction: PublicKey,
     auctionData: Auction,
     auctionAssetVault: PublicKey,
-    sellerAssetAccount: PublicKey
+    sellerAssetAccount: PublicKey,
   ): Promise<TransactionInstruction> {
     const data = Buffer.alloc(8);
     const discriminator = Buffer.from([140, 244, 78, 254, 118, 242, 206, 227]);
@@ -710,7 +739,7 @@ export class AuctionClient {
    */
   private async createExtendAuctionInstruction(
     auction: PublicKey,
-    newEndTime: BN
+    newEndTime: BN,
   ): Promise<TransactionInstruction> {
     const data = Buffer.alloc(16);
     let offset = 0;
@@ -719,7 +748,7 @@ export class AuctionClient {
     discriminator.copy(data, offset);
     offset += 8;
 
-    newEndTime.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    newEndTime.toArrayLike(Buffer, "le", 8).copy(data, offset);
 
     return new TransactionInstruction({
       keys: [

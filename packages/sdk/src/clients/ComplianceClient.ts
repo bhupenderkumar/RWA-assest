@@ -3,14 +3,10 @@ import {
   PublicKey,
   TransactionInstruction,
   SystemProgram,
-} from '@solana/web3.js';
-import { AnchorProvider } from '@coral-xyz/anchor';
-import BN from 'bn.js';
-import {
-  COMPLIANCE_PROGRAM_ID,
-  MAX_REASON_LENGTH,
-  DEFAULT_KYC_VALIDITY,
-} from '../constants';
+} from "@solana/web3.js";
+import { AnchorProvider } from "@coral-xyz/anchor";
+import BN from "bn.js";
+import { COMPLIANCE_PROGRAM_ID, MAX_REASON_LENGTH } from "../constants";
 import {
   ComplianceConfig,
   WhitelistEntry,
@@ -22,7 +18,7 @@ import {
   AddJurisdictionRuleParams,
   UpdateComplianceConfigParams,
   InvalidParameterError,
-} from '../types';
+} from "../types";
 import {
   deriveComplianceConfig,
   deriveWhitelistEntry,
@@ -34,17 +30,16 @@ import {
   deserializeJurisdictionRule,
   fetchAccount,
   getProgramAccounts,
-  createMemcmpFilter,
   accountExists,
   stringToJurisdiction,
   jurisdictionToString,
-} from '../utils/accounts';
+} from "../utils/accounts";
 import {
   TransactionBuilder,
   sendWithProvider,
   SendTransactionOptions,
   WalletAdapter,
-} from '../utils/transactions';
+} from "../utils/transactions";
 
 /**
  * Client for interacting with the Compliance program
@@ -81,7 +76,7 @@ export class ComplianceClient {
   constructor(
     connection: Connection,
     wallet: WalletAdapter,
-    programId: PublicKey = COMPLIANCE_PROGRAM_ID
+    programId: PublicKey = COMPLIANCE_PROGRAM_ID,
   ) {
     this.connection = connection;
     this.wallet = wallet;
@@ -108,7 +103,7 @@ export class ComplianceClient {
       this.connection,
       configPda,
       deserializeComplianceConfig,
-      'ComplianceConfig'
+      "ComplianceConfig",
     );
   }
 
@@ -121,7 +116,7 @@ export class ComplianceClient {
       this.connection,
       whitelistPda,
       deserializeWhitelistEntry,
-      'WhitelistEntry'
+      "WhitelistEntry",
     );
   }
 
@@ -134,7 +129,7 @@ export class ComplianceClient {
       this.connection,
       blacklistPda,
       deserializeBlacklistEntry,
-      'BlacklistEntry'
+      "BlacklistEntry",
     );
   }
 
@@ -143,14 +138,14 @@ export class ComplianceClient {
    */
   async getJurisdictionRule(
     fromJurisdiction: string,
-    toJurisdiction: string
+    toJurisdiction: string,
   ): Promise<JurisdictionRule> {
     const [rulePda] = deriveJurisdictionRule(fromJurisdiction, toJurisdiction);
     return fetchAccount(
       this.connection,
       rulePda,
       deserializeJurisdictionRule,
-      'JurisdictionRule'
+      "JurisdictionRule",
     );
   }
 
@@ -177,7 +172,7 @@ export class ComplianceClient {
           isWhitelisted: false,
           isBlacklisted: true,
           kycValid: false,
-          reason: 'Investor is blacklisted',
+          reason: "Investor is blacklisted",
         };
       }
     } catch {
@@ -187,19 +182,19 @@ export class ComplianceClient {
     // Check whitelist
     try {
       const whitelistEntry = await this.getWhitelistEntry(investor);
-      
+
       if (!whitelistEntry.isActive) {
         return {
           isCompliant: false,
           isWhitelisted: false,
           isBlacklisted: false,
           kycValid: false,
-          reason: 'Investor is not whitelisted',
+          reason: "Investor is not whitelisted",
         };
       }
 
       const kycValid = whitelistEntry.kycExpiry.gtn(currentTime);
-      
+
       const result: {
         isCompliant: boolean;
         isWhitelisted: boolean;
@@ -216,11 +211,11 @@ export class ComplianceClient {
         investorType: whitelistEntry.investorType,
         jurisdiction: jurisdictionToString(whitelistEntry.jurisdiction),
       };
-      
+
       if (!kycValid) {
-        result.reason = 'KYC has expired';
+        result.reason = "KYC has expired";
       }
-      
+
       return result;
     } catch {
       return {
@@ -228,7 +223,7 @@ export class ComplianceClient {
         isWhitelisted: false,
         isBlacklisted: false,
         kycValid: false,
-        reason: 'Investor is not whitelisted',
+        reason: "Investor is not whitelisted",
       };
     }
   }
@@ -239,7 +234,7 @@ export class ComplianceClient {
   async checkTransferRestrictions(
     sender: PublicKey,
     receiver: PublicKey,
-    amount: BN
+    amount: BN,
   ): Promise<{
     isAllowed: boolean;
     reason?: string;
@@ -250,7 +245,7 @@ export class ComplianceClient {
 
       // Check if transfers are paused
       if (config.isPaused) {
-        return { isAllowed: false, reason: 'Transfers are paused' };
+        return { isAllowed: false, reason: "Transfers are paused" };
       }
 
       // Check amount limit
@@ -283,7 +278,9 @@ export class ComplianceClient {
       if (config.transferCooldown.gtn(0)) {
         const senderEntry = await this.getWhitelistEntry(sender);
         const currentTime = Math.floor(Date.now() / 1000);
-        const cooldownEnd = senderEntry.lastTransfer.add(config.transferCooldown);
+        const cooldownEnd = senderEntry.lastTransfer.add(
+          config.transferCooldown,
+        );
 
         if (cooldownEnd.gtn(currentTime)) {
           return {
@@ -294,11 +291,14 @@ export class ComplianceClient {
       }
 
       // Check jurisdiction rules
-      if (senderVerification.jurisdiction && receiverVerification.jurisdiction) {
+      if (
+        senderVerification.jurisdiction &&
+        receiverVerification.jurisdiction
+      ) {
         try {
           const rule = await this.getJurisdictionRule(
             senderVerification.jurisdiction,
-            receiverVerification.jurisdiction
+            receiverVerification.jurisdiction,
           );
 
           if (!rule.isAllowed) {
@@ -362,7 +362,7 @@ export class ComplianceClient {
       this.connection,
       this.programId,
       deserializeWhitelistEntry,
-      []
+      [],
     );
   }
 
@@ -376,7 +376,7 @@ export class ComplianceClient {
       this.connection,
       this.programId,
       deserializeBlacklistEntry,
-      []
+      [],
     );
   }
 
@@ -384,11 +384,11 @@ export class ComplianceClient {
    * List whitelist entries by investor type
    */
   async listWhitelistByType(
-    investorType: InvestorType
+    investorType: InvestorType,
   ): Promise<{ pubkey: PublicKey; account: WhitelistEntry }[]> {
     const all = await this.listWhitelistEntries();
     return all.filter(
-      (e) => e.account.investorType === investorType && e.account.isActive
+      (e) => e.account.investorType === investorType && e.account.isActive,
     );
   }
 
@@ -396,7 +396,7 @@ export class ComplianceClient {
    * List whitelist entries by jurisdiction
    */
   async listWhitelistByJurisdiction(
-    jurisdiction: string
+    jurisdiction: string,
   ): Promise<{ pubkey: PublicKey; account: WhitelistEntry }[]> {
     const all = await this.listWhitelistEntries();
     const targetJurisdiction = stringToJurisdiction(jurisdiction);
@@ -404,7 +404,7 @@ export class ComplianceClient {
       (e) =>
         e.account.jurisdiction[0] === targetJurisdiction[0] &&
         e.account.jurisdiction[1] === targetJurisdiction[1] &&
-        e.account.isActive
+        e.account.isActive,
     );
   }
 
@@ -419,17 +419,17 @@ export class ComplianceClient {
     civicGatekeeperNetwork: PublicKey,
     maxTransferAmount: BN,
     transferCooldown: BN,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createInitializeInstruction(
       civicGatekeeperNetwork,
       maxTransferAmount,
-      transferCooldown
+      transferCooldown,
     );
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -449,12 +449,12 @@ export class ComplianceClient {
    */
   async addToWhitelist(
     params: AddToWhitelistParams,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; whitelistAddress: PublicKey }> {
     if (params.jurisdiction.length !== 2) {
       throw new InvalidParameterError(
-        'jurisdiction',
-        'Jurisdiction must be a 2-letter country code'
+        "jurisdiction",
+        "Jurisdiction must be a 2-letter country code",
       );
     }
 
@@ -464,7 +464,7 @@ export class ComplianceClient {
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -486,13 +486,13 @@ export class ComplianceClient {
    */
   async removeFromWhitelist(
     investor: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createRemoveFromWhitelistInstruction(investor);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -512,12 +512,12 @@ export class ComplianceClient {
    */
   async addToBlacklist(
     params: AddToBlacklistParams,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; blacklistAddress: PublicKey }> {
     if (params.reason.length > MAX_REASON_LENGTH) {
       throw new InvalidParameterError(
-        'reason',
-        `Reason must be at most ${MAX_REASON_LENGTH} characters`
+        "reason",
+        `Reason must be at most ${MAX_REASON_LENGTH} characters`,
       );
     }
 
@@ -527,7 +527,7 @@ export class ComplianceClient {
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -549,13 +549,13 @@ export class ComplianceClient {
    */
   async removeFromBlacklist(
     address: PublicKey,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createRemoveFromBlacklistInstruction(address);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -575,25 +575,28 @@ export class ComplianceClient {
    */
   async addJurisdictionRule(
     params: AddJurisdictionRuleParams,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<{ signature: string; ruleAddress: PublicKey }> {
-    if (params.fromJurisdiction.length !== 2 || params.toJurisdiction.length !== 2) {
+    if (
+      params.fromJurisdiction.length !== 2 ||
+      params.toJurisdiction.length !== 2
+    ) {
       throw new InvalidParameterError(
-        'jurisdiction',
-        'Jurisdictions must be 2-letter country codes'
+        "jurisdiction",
+        "Jurisdictions must be 2-letter country codes",
       );
     }
 
     const [rulePda] = deriveJurisdictionRule(
       params.fromJurisdiction,
-      params.toJurisdiction
+      params.toJurisdiction,
     );
 
     const ix = await this.createAddJurisdictionRuleInstruction(params);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -615,13 +618,13 @@ export class ComplianceClient {
    */
   async updateConfig(
     params: UpdateComplianceConfigParams,
-    options?: SendTransactionOptions
+    options?: SendTransactionOptions,
   ): Promise<string> {
     const ix = await this.createUpdateConfigInstruction(params);
 
     const builder = new TransactionBuilder(
       this.connection,
-      this.wallet.publicKey
+      this.wallet.publicKey,
     );
     builder.addInstruction(ix);
 
@@ -660,7 +663,7 @@ export class ComplianceClient {
   private async createInitializeInstruction(
     civicGatekeeperNetwork: PublicKey,
     maxTransferAmount: BN,
-    transferCooldown: BN
+    transferCooldown: BN,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
 
@@ -677,11 +680,11 @@ export class ComplianceClient {
     offset += 32;
 
     // Max transfer amount
-    maxTransferAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    maxTransferAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
     offset += 8;
 
     // Transfer cooldown
-    transferCooldown.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    transferCooldown.toArrayLike(Buffer, "le", 8).copy(data, offset);
 
     return new TransactionInstruction({
       keys: [
@@ -698,7 +701,7 @@ export class ComplianceClient {
    * Create add to whitelist instruction
    */
   private async createAddToWhitelistInstruction(
-    params: AddToWhitelistParams
+    params: AddToWhitelistParams,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
     const [whitelistPda] = deriveWhitelistEntry(params.investor);
@@ -721,13 +724,15 @@ export class ComplianceClient {
     offset += 1;
 
     // Jurisdiction
-    jurisdictionBytes[0] !== undefined && data.writeUInt8(jurisdictionBytes[0], offset);
+    jurisdictionBytes[0] !== undefined &&
+      data.writeUInt8(jurisdictionBytes[0], offset);
     offset += 1;
-    jurisdictionBytes[1] !== undefined && data.writeUInt8(jurisdictionBytes[1], offset);
+    jurisdictionBytes[1] !== undefined &&
+      data.writeUInt8(jurisdictionBytes[1], offset);
     offset += 1;
 
     // KYC expiry
-    params.kycExpiry.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+    params.kycExpiry.toArrayLike(Buffer, "le", 8).copy(data, offset);
 
     return new TransactionInstruction({
       keys: [
@@ -745,7 +750,7 @@ export class ComplianceClient {
    * Create remove from whitelist instruction
    */
   private async createRemoveFromWhitelistInstruction(
-    investor: PublicKey
+    investor: PublicKey,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
     const [whitelistPda] = deriveWhitelistEntry(investor);
@@ -769,11 +774,11 @@ export class ComplianceClient {
    * Create add to blacklist instruction
    */
   private async createAddToBlacklistInstruction(
-    params: AddToBlacklistParams
+    params: AddToBlacklistParams,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
     const [blacklistPda] = deriveBlacklistEntry(params.address);
-    const reasonBytes = Buffer.from(params.reason, 'utf8');
+    const reasonBytes = Buffer.from(params.reason, "utf8");
 
     const dataSize = 8 + 32 + 4 + reasonBytes.length;
     const data = Buffer.alloc(dataSize);
@@ -809,7 +814,7 @@ export class ComplianceClient {
    * Create remove from blacklist instruction
    */
   private async createRemoveFromBlacklistInstruction(
-    address: PublicKey
+    address: PublicKey,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
     const [blacklistPda] = deriveBlacklistEntry(address);
@@ -833,12 +838,12 @@ export class ComplianceClient {
    * Create add jurisdiction rule instruction
    */
   private async createAddJurisdictionRuleInstruction(
-    params: AddJurisdictionRuleParams
+    params: AddJurisdictionRuleParams,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
     const [rulePda] = deriveJurisdictionRule(
       params.fromJurisdiction,
-      params.toJurisdiction
+      params.toJurisdiction,
     );
     const fromBytes = stringToJurisdiction(params.fromJurisdiction);
     const toBytes = stringToJurisdiction(params.toJurisdiction);
@@ -872,7 +877,7 @@ export class ComplianceClient {
     if (params.maxAmount) {
       data.writeUInt8(1, offset);
       offset += 1;
-      params.maxAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+      params.maxAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
     } else {
       data.writeUInt8(0, offset);
     }
@@ -893,15 +898,18 @@ export class ComplianceClient {
    * Create update config instruction
    */
   private async createUpdateConfigInstruction(
-    params: UpdateComplianceConfigParams
+    params: UpdateComplianceConfigParams,
   ): Promise<TransactionInstruction> {
     const [configPda] = deriveComplianceConfig();
 
     const dataSize =
       8 +
-      1 + (params.maxTransferAmount ? 8 : 0) +
-      1 + (params.transferCooldown ? 8 : 0) +
-      1 + (params.isPaused !== undefined ? 1 : 0);
+      1 +
+      (params.maxTransferAmount ? 8 : 0) +
+      1 +
+      (params.transferCooldown ? 8 : 0) +
+      1 +
+      (params.isPaused !== undefined ? 1 : 0);
 
     const data = Buffer.alloc(dataSize);
     let offset = 0;
@@ -915,7 +923,7 @@ export class ComplianceClient {
     if (params.maxTransferAmount) {
       data.writeUInt8(1, offset);
       offset += 1;
-      params.maxTransferAmount.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+      params.maxTransferAmount.toArrayLike(Buffer, "le", 8).copy(data, offset);
       offset += 8;
     } else {
       data.writeUInt8(0, offset);
@@ -926,7 +934,7 @@ export class ComplianceClient {
     if (params.transferCooldown) {
       data.writeUInt8(1, offset);
       offset += 1;
-      params.transferCooldown.toArrayLike(Buffer, 'le', 8).copy(data, offset);
+      params.transferCooldown.toArrayLike(Buffer, "le", 8).copy(data, offset);
       offset += 8;
     } else {
       data.writeUInt8(0, offset);
