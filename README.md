@@ -34,16 +34,17 @@ This platform enables traditional banks to tokenize real-world assets (RWAs) on 
 
 ### Why Solana?
 
-| Feature | Benefit |
-|---------|---------|
-| **400ms Finality** | Near-instant transaction settlement |
-| **$0.00025 Fees** | Cost-effective for high-volume tokenization |
-| **Token-2022** | Advanced token extensions for compliance |
+| Feature                    | Benefit                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| **400ms Finality**         | Near-instant transaction settlement                      |
+| **$0.00025 Fees**          | Cost-effective for high-volume tokenization              |
+| **Token-2022**             | Advanced token extensions for compliance                 |
 | **Institutional Adoption** | BlackRock, Apollo, Securitize already building on Solana |
 
 ## ✨ Key Features
 
 ### For Banks
+
 - 🏛️ **Asset Registration Portal** - Streamlined onboarding workflow
 - 📄 **Document Management** - Secure storage of appraisals, legal docs
 - 💰 **Tokenization Engine** - One-click asset tokenization via Securitize
@@ -51,6 +52,7 @@ This platform enables traditional banks to tokenize real-world assets (RWAs) on 
 - 🔒 **Compliance Tools** - Built-in regulatory reporting
 
 ### For Investors
+
 - 🛒 **Asset Marketplace** - Browse and invest in tokenized bank assets
 - 🔍 **Due Diligence Center** - Access all asset documentation
 - 💼 **Portfolio Management** - Track holdings across assets
@@ -58,6 +60,7 @@ This platform enables traditional banks to tokenize real-world assets (RWAs) on 
 - 📱 **Mobile-First Design** - Invest from anywhere
 
 ### For Regulators
+
 - 📝 **Audit Trail** - Complete on-chain transaction history
 - 👤 **KYC/AML Compliance** - Verified investor identities
 - 📈 **Real-time Reporting** - Transparent asset tracking
@@ -128,7 +131,7 @@ This platform enables traditional banks to tokenize real-world assets (RWAs) on 
 1. ASSET REGISTRATION
    Bank → Portal → Backend → Document Storage → Securitize API → Tokenization
 
-2. INVESTOR ONBOARDING  
+2. INVESTOR ONBOARDING
    Investor → Portal → Civic Pass → KYC Verification → SAS Attestation → Access Granted
 
 3. TOKEN PURCHASE
@@ -142,33 +145,35 @@ This platform enables traditional banks to tokenize real-world assets (RWAs) on 
 
 ### Primary Integrations
 
-| Provider | Category | Purpose | Status |
-|----------|----------|---------|--------|
-| **Securitize** | Tokenization | SEC-registered transfer agent, sToken standard | 🔴 Required |
-| **Civic Pass** | KYC/AML | Identity verification, attestation tokens | 🔴 Required |
-| **Anchorage Digital** | Custody | Federally chartered crypto bank | 🔴 Required |
-| **RedStone** | Oracles | RWA price feeds for tokenized assets | 🟡 Recommended |
+| Provider              | Category     | Purpose                                        | Status         |
+| --------------------- | ------------ | ---------------------------------------------- | -------------- |
+| **Securitize**        | Tokenization | SEC-registered transfer agent, sToken standard | 🔴 Required    |
+| **Civic Pass**        | KYC/AML      | Identity verification, attestation tokens      | 🔴 Required    |
+| **Anchorage Digital** | Custody      | Federally chartered crypto bank                | 🔴 Required    |
+| **RedStone**          | Oracles      | RWA price feeds for tokenized assets           | 🟡 Recommended |
 
 ### Secondary Integrations
 
-| Provider | Category | Purpose | Status |
-|----------|----------|---------|--------|
-| **Wormhole** | Cross-chain | Multi-chain token transfers | 🟢 Optional |
-| **Jupiter** | DEX | Liquidity aggregation | 🟢 Optional |
-| **Circle (USDC)** | Payments | Fiat on/off ramp | 🟡 Recommended |
-| **Fireblocks** | Alt Custody | API-first custody alternative | 🟢 Optional |
+| Provider          | Category    | Purpose                       | Status         |
+| ----------------- | ----------- | ----------------------------- | -------------- |
+| **Wormhole**      | Cross-chain | Multi-chain token transfers   | 🟢 Optional    |
+| **Jupiter**       | DEX         | Liquidity aggregation         | 🟢 Optional    |
+| **Circle (USDC)** | Payments    | Fiat on/off ramp              | 🟡 Recommended |
+| **Fireblocks**    | Alt Custody | API-first custody alternative | 🟢 Optional    |
 
 ### Integration Details
 
 #### 🔐 Civic Pass + Solana Attestation Service (SAS)
 
 **What it provides:**
+
 - Document verification & biometric matching
 - Sanctions/PEP screening
 - Multi-jurisdiction support
 - Reusable identity credentials
 
 **Integration methods:**
+
 - React Component (easiest)
 - REST API
 - Smart Contract hooks
@@ -190,6 +195,7 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 #### 🏛️ Securitize
 
 **What it provides:**
+
 - Complete tokenization infrastructure
 - Built-in KYC/AML
 - SEC-registered transfer agent
@@ -203,6 +209,7 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 #### 🔒 Anchorage Digital
 
 **What it provides:**
+
 - OCC-regulated federal crypto bank
 - Bank-grade security & insurance
 - Segregated client wallets
@@ -214,6 +221,7 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 #### 📊 RedStone Oracles
 
 **What it provides:**
+
 - Institutional-grade RWA price feeds
 - Tokenized treasury data
 - Credit product pricing
@@ -222,6 +230,7 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 ## 🛠 Technology Stack
 
 ### Frontend
+
 - **Framework:** Next.js 14 (App Router)
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS + shadcn/ui
@@ -229,6 +238,7 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 - **Wallet:** @solana/wallet-adapter
 
 ### Backend
+
 - **Runtime:** Node.js 20 LTS
 - **Framework:** Express.js / Fastify
 - **Language:** TypeScript
@@ -238,12 +248,14 @@ import { GatewayProvider } from '@civic/solana-gateway-react';
 - **Search:** Elasticsearch
 
 ### Blockchain
+
 - **Network:** Solana Mainnet-Beta
 - **Programs:** Anchor Framework (Rust)
 - **Token Standard:** Token-2022 (SPL)
 - **SDK:** @solana/web3.js, @coral-xyz/anchor
 
 ### Infrastructure
+
 - **Cloud:** AWS / GCP
 - **Containers:** Docker + Kubernetes
 - **CI/CD:** GitHub Actions
@@ -460,25 +472,25 @@ rwa-asset/
 
 ### Setup Costs
 
-| Item | Cost Range | Notes |
-|------|------------|-------|
-| Securitize Partnership | $50K - $150K | Enterprise setup fee |
-| Civic Pass Setup | $10K - $30K | Developer tier |
-| Anchorage Digital | Quote-based | Enterprise custody |
-| Legal/Compliance | $50K - $100K | Regulatory consulting |
-| Security Audit | $30K - $80K | Smart contract audit |
-| **Total Setup** | **$140K - $360K** | |
+| Item                   | Cost Range        | Notes                 |
+| ---------------------- | ----------------- | --------------------- |
+| Securitize Partnership | $50K - $150K      | Enterprise setup fee  |
+| Civic Pass Setup       | $10K - $30K       | Developer tier        |
+| Anchorage Digital      | Quote-based       | Enterprise custody    |
+| Legal/Compliance       | $50K - $100K      | Regulatory consulting |
+| Security Audit         | $30K - $80K       | Smart contract audit  |
+| **Total Setup**        | **$140K - $360K** |                       |
 
 ### Ongoing Costs (Monthly)
 
-| Item | Cost Range | Notes |
-|------|------------|-------|
-| Securitize | 1-2% AUM annually | Platform fees |
-| Civic Pass | $2-10 per verification | Per-user basis |
-| Anchorage Digital | 0.15-0.50% AUM | Custody fees |
-| Infrastructure | $2K - $5K | Cloud hosting |
-| Solana RPC | $500 - $2K | Enterprise RPC |
-| **Total Monthly** | **$5K - $15K** | + % of AUM |
+| Item              | Cost Range             | Notes          |
+| ----------------- | ---------------------- | -------------- |
+| Securitize        | 1-2% AUM annually      | Platform fees  |
+| Civic Pass        | $2-10 per verification | Per-user basis |
+| Anchorage Digital | 0.15-0.50% AUM         | Custody fees   |
+| Infrastructure    | $2K - $5K              | Cloud hosting  |
+| Solana RPC        | $500 - $2K             | Enterprise RPC |
+| **Total Monthly** | **$5K - $15K**         | + % of AUM     |
 
 ### Estimated MVP Budget: **$150K - $300K**
 
@@ -487,30 +499,35 @@ rwa-asset/
 ### Solana Foundation Grant Angles
 
 #### 1. Open Source Components
+
 - Orchestration smart contracts
 - Securitize + Solana integration guides
 - Bank asset tokenization templates
 - Compliance framework documentation
 
 #### 2. Public Good Value
+
 - Educational content on enterprise RWA tokenization
 - Case studies from pilot banks
 - Best practices documentation
 - Compliance framework templates
 
 #### 3. Ecosystem Growth
+
 - Brings traditional banks onto Solana
 - Demonstrates institutional-grade RWA infrastructure
 - Creates blueprint for future bank integrations
 - Increases TVL and transaction volume
 
 #### 4. Solana-Native Innovation
+
 - Leverages Token-2022 extensions
 - Uses Solana's speed for real-time settlement
 - Integrates with SAS for reusable identity
 - Showcases institutional Solana capabilities
 
 ### Grant Application Links
+
 - [Solana Foundation Grants](https://solana.org/grants)
 - [Superteam DAO](https://superteam.fun)
 - [Jump Crypto Grant](https://jumpcrypto.com)
@@ -550,6 +567,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🔗 Useful Links
 
 ### Partner Documentation
+
 - [Securitize Developer Docs](https://securitize.io/developers)
 - [Civic Pass Documentation](https://docs.civic.com/)
 - [Anchorage Digital API](https://docs.anchorage.com/)
@@ -557,12 +575,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Wormhole SDK](https://docs.wormhole.com/)
 
 ### Solana Resources
+
 - [Solana Cookbook](https://solanacookbook.com/)
 - [Anchor Framework](https://www.anchor-lang.com/)
 - [Token-2022 Documentation](https://spl.solana.com/token-2022)
 - [Solana Attestation Service](https://docs.solana.com/sas)
 
 ### Regulatory Resources
+
 - [SEC Digital Asset Framework](https://www.sec.gov/corpfin/framework-investment-contract-analysis-digital-assets)
 - [OCC Crypto Custody Guidance](https://www.occ.gov/topics/digital-assets/index.html)
 - [FinCEN Virtual Currency Guidance](https://www.fincen.gov/resources/statutes-and-regulations/guidance)
@@ -572,3 +592,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 <p align="center">
   Built with ❤️ for the Solana Ecosystem
 </p>
+# Deployed: Sat Jan  3 19:11:05 IST 2026
