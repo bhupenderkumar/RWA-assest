@@ -1,0 +1,76 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  EC2_HOST: 54.172.209.105
+  EC2_USER: ubuntu
+  DEPLOY_PATH: /opt/rwa-platform
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to EC2
+        run: |
+          # Sync code to EC2 (excluding node_modules, .next, etc.)
+          rsync -avz --delete \
+            --exclude='node_modules' \
+            --exclude='.next' \
+            --exclude='dist' \
+            --exclude='target' \
+            --exclude='.turbo' \
+            --exclude='.git' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            ./ ${{ env.EC2_USER }}@${{ env.EC2_HOST }}:${{ env.DEPLOY_PATH }}/
+
+      - name: Rebuild and Restart Docker Containers
+        run: |
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no \
+            ${{ env.EC2_USER }}@${{ env.EC2_HOST }} << 'DEPLOY_SCRIPT'
+            
+            cd /opt/rwa-platform/docker
+            
+            echo "🔄 Rebuilding Docker images..."
+            sudo docker compose -f docker-compose.ec2.yml build --no-cache
+            
+            echo "🔄 Restarting containers..."
+            sudo docker compose -f docker-compose.ec2.yml down
+            sudo docker compose -f docker-compose.ec2.yml up -d
+            
+            echo "⏳ Waiting for health checks..."
+            sleep 20
+            
+            echo "✅ Checking container status..."
+            sudo docker ps --format "table {{.Names}}\t{{.Status}}"
+            
+            echo "🎉 Deployment complete!"
+          DEPLOY_SCRIPT
+
+      - name: Verify Deployment
+        run: |
+          echo "Checking web app..."
+          curl -sf http://${{ env.EC2_HOST }}:3000 > /dev/null && echo "✅ Web app is up!" || echo "❌ Web app failed"
+          
+          echo "Checking API..."
+          curl -sf http://${{ env.EC2_HOST }}:3001/api/v1/health > /dev/null && echo "✅ API is up!" || echo "❌ API failed"
+
+      - name: Cleanup SSH Key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
