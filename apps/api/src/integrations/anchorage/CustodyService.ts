@@ -1,20 +1,13 @@
 /**
  * Anchorage Digital Integration - Custody Service
- * 
+ *
  * High-level service for custody operations
  */
 
-import { PublicKey } from '@solana/web3.js';
-import { config } from '../../config';
-import { logger } from '../../utils/logger';
-import { anchorageClient } from './AnchorageClient';
-import {
-  Vault,
-  CustodyWallet,
-  AssetBalance,
-  VaultType,
-  AnchorageError,
-} from './types';
+import { config } from "../../config";
+import { logger } from "../../utils/logger";
+import { anchorageClient } from "./AnchorageClient";
+import { Vault, CustodyWallet, AssetBalance, TransactionStatus } from "./types";
 
 /**
  * CustodyService provides high-level custody operations
@@ -45,21 +38,21 @@ export class CustodyService {
    */
   async getSolanaWallets(): Promise<CustodyWallet[]> {
     const wallets = await anchorageClient.listWallets(this.vaultId);
-    return wallets.filter((w) => w.network === 'SOLANA');
+    return wallets.filter((w) => w.network === "SOLANA");
   }
 
   /**
    * Create a new Solana custody wallet
    */
   async createSolanaWallet(name: string): Promise<CustodyWallet> {
-    logger.info('Creating new Solana custody wallet', { name });
+    logger.info("Creating new Solana custody wallet", { name });
 
     const wallet = await anchorageClient.createWallet(this.vaultId, {
       name,
-      network: 'SOLANA',
+      network: "SOLANA",
     });
 
-    logger.info('Solana custody wallet created', {
+    logger.info("Solana custody wallet created", {
       walletId: wallet.id,
       address: wallet.address,
     });
@@ -74,7 +67,7 @@ export class CustodyService {
     const result = await anchorageClient.getDepositAddress(
       this.vaultId,
       walletId,
-      asset
+      asset,
     );
     return result.address;
   }
@@ -109,13 +102,13 @@ export class CustodyService {
         const balance = await anchorageClient.getAssetBalance(
           this.vaultId,
           wallet.id,
-          'USDC'
+          "USDC",
         );
         byWallet.push({ walletId: wallet.id, balance: balance.balance });
         total += BigInt(balance.balance);
       } catch (error) {
         // Wallet might not have USDC balance
-        byWallet.push({ walletId: wallet.id, balance: '0' });
+        byWallet.push({ walletId: wallet.id, balance: "0" });
       }
     }
 
@@ -130,16 +123,20 @@ export class CustodyService {
    */
   async getTokenBalance(
     walletId: string,
-    mintAddress: string
+    mintAddress: string,
   ): Promise<AssetBalance | null> {
     try {
       const balances = await anchorageClient.getWalletBalances(
         this.vaultId,
-        walletId
+        walletId,
       );
       return balances.find((b) => b.mintAddress === mintAddress) || null;
     } catch (error) {
-      logger.error('Failed to get token balance', { error, walletId, mintAddress });
+      logger.error("Failed to get token balance", {
+        error,
+        walletId,
+        mintAddress,
+      });
       return null;
     }
   }
@@ -150,17 +147,17 @@ export class CustodyService {
   async hasSufficientBalance(
     walletId: string,
     asset: string,
-    requiredAmount: string
+    requiredAmount: string,
   ): Promise<boolean> {
     try {
       const balance = await anchorageClient.getAssetBalance(
         this.vaultId,
         walletId,
-        asset
+        asset,
       );
       return BigInt(balance.balance) >= BigInt(requiredAmount);
     } catch (error) {
-      logger.error('Failed to check balance', { error });
+      logger.error("Failed to check balance", { error });
       return false;
     }
   }
@@ -197,7 +194,7 @@ export class CustodyService {
       const wallets = await this.getSolanaWallets();
       return wallets.some((w) => w.address === address);
     } catch (error) {
-      logger.error('Failed to validate custody address', { error, address });
+      logger.error("Failed to validate custody address", { error, address });
       return false;
     }
   }
@@ -211,7 +208,7 @@ export class CustodyService {
     assetCount: number;
     topAssets: Array<{ symbol: string; valueUSD: number }>;
   }> {
-    const [vault, wallets, balances] = await Promise.all([
+    const [_vault, wallets, balances] = await Promise.all([
       this.getPrimaryVault(),
       this.getSolanaWallets(),
       this.getTotalBalances(),
@@ -236,24 +233,31 @@ export class CustodyService {
    */
   async setupDepositMonitoring(
     walletId: string,
-    callback: (deposit: { asset: string; amount: string; from: string }) => void
+    callback: (deposit: {
+      asset: string;
+      amount: string;
+      from: string;
+    }) => void,
   ): Promise<() => void> {
     // In production, this would set up webhook or polling
     // For now, return a no-op cleanup function
-    logger.info('Setting up deposit monitoring', { walletId });
+    logger.info("Setting up deposit monitoring", { walletId });
 
     // Poll every 30 seconds as fallback
     const interval = setInterval(async () => {
       try {
-        const transactions = await anchorageClient.listTransactions(this.vaultId, {
-          walletId,
-          status: 'CONFIRMED' as any,
-          limit: 10,
-        });
+        const transactions = await anchorageClient.listTransactions(
+          this.vaultId,
+          {
+            walletId,
+            status: TransactionStatus.CONFIRMED,
+            limit: 10,
+          },
+        );
 
         // Process new deposits (would need to track processed txs)
         for (const tx of transactions.data) {
-          if (tx.type === 'DEPOSIT' && tx.sourceAddress) {
+          if (tx.type === "DEPOSIT" && tx.sourceAddress) {
             callback({
               asset: tx.asset,
               amount: tx.amount,
@@ -262,7 +266,7 @@ export class CustodyService {
           }
         }
       } catch (error) {
-        logger.error('Deposit monitoring error', { error });
+        logger.error("Deposit monitoring error", { error });
       }
     }, 30000);
 

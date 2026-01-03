@@ -1,6 +1,6 @@
 /**
  * Circle USDC Integration - Service
- * 
+ *
  * Service for USDC operations on Solana
  */
 
@@ -9,21 +9,19 @@ import {
   PublicKey,
   Keypair,
   Transaction,
-  SystemProgram,
   sendAndConfirmTransaction,
   TransactionInstruction,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 import {
   getAssociatedTokenAddress,
   createAssociatedTokenAccountInstruction,
   createTransferInstruction,
   getAccount,
-  TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
   TokenAccountNotFoundError,
-} from '@solana/spl-token';
-import { config } from '../../config';
-import { logger } from '../../utils/logger';
+} from "@solana/spl-token";
+import { config } from "../../config";
+import { logger } from "../../utils/logger";
 import {
   USDCBalance,
   USDCTransfer,
@@ -37,7 +35,7 @@ import {
   USDC_DECIMALS,
   USDCError,
   USDCErrorCode,
-} from './types';
+} from "./types";
 
 /**
  * USDCService handles all USDC operations on Solana
@@ -48,12 +46,15 @@ export class USDCService {
 
   constructor() {
     this.connection = new Connection(config.solana.rpcUrl, {
-      commitment: config.solana.commitment as 'confirmed' | 'finalized',
+      commitment: config.solana.commitment as "confirmed" | "finalized",
     });
 
     // Get USDC mint based on network
     const network = config.solana.network as keyof typeof USDC_MINT;
-    const mintAddress = config.usdc.mint || USDC_MINT[network.toUpperCase() as keyof typeof USDC_MINT] || USDC_MINT.DEVNET;
+    const mintAddress =
+      config.usdc.mint ||
+      USDC_MINT[network.toUpperCase() as keyof typeof USDC_MINT] ||
+      USDC_MINT.DEVNET;
     this.usdcMint = new PublicKey(mintAddress);
   }
 
@@ -72,7 +73,7 @@ export class USDCService {
       const wallet = new PublicKey(walletAddress);
       const tokenAccount = await getAssociatedTokenAddress(
         this.usdcMint,
-        wallet
+        wallet,
       );
 
       try {
@@ -90,19 +91,19 @@ export class USDCService {
         if (error instanceof TokenAccountNotFoundError) {
           return {
             wallet: walletAddress,
-            balance: '0',
-            balanceRaw: '0',
+            balance: "0",
+            balanceRaw: "0",
             tokenAccount: tokenAccount.toBase58(),
           };
         }
         throw error;
       }
     } catch (error) {
-      logger.error('Failed to get USDC balance', { error, walletAddress });
+      logger.error("Failed to get USDC balance", { error, walletAddress });
       throw new USDCError(
-        'Failed to get USDC balance',
+        "Failed to get USDC balance",
         USDCErrorCode.TRANSACTION_FAILED,
-        { walletAddress }
+        { walletAddress },
       );
     }
   }
@@ -110,12 +111,14 @@ export class USDCService {
   /**
    * Get token account info
    */
-  async getTokenAccountInfo(walletAddress: string): Promise<TokenAccountInfo | null> {
+  async getTokenAccountInfo(
+    walletAddress: string,
+  ): Promise<TokenAccountInfo | null> {
     try {
       const wallet = new PublicKey(walletAddress);
       const tokenAccount = await getAssociatedTokenAddress(
         this.usdcMint,
-        wallet
+        wallet,
       );
 
       const account = await getAccount(this.connection, tokenAccount);
@@ -150,13 +153,10 @@ export class USDCService {
    */
   async createTokenAccount(
     walletAddress: string,
-    payer: Keypair
+    payer: Keypair,
   ): Promise<string> {
     const wallet = new PublicKey(walletAddress);
-    const tokenAccount = await getAssociatedTokenAddress(
-      this.usdcMint,
-      wallet
-    );
+    const tokenAccount = await getAssociatedTokenAddress(this.usdcMint, wallet);
 
     // Check if account already exists
     const existingAccount = await this.getTokenAccountInfo(walletAddress);
@@ -169,17 +169,17 @@ export class USDCService {
         payer.publicKey,
         tokenAccount,
         wallet,
-        this.usdcMint
-      )
+        this.usdcMint,
+      ),
     );
 
     const signature = await sendAndConfirmTransaction(
       this.connection,
       transaction,
-      [payer]
+      [payer],
     );
 
-    logger.info('Created USDC token account', {
+    logger.info("Created USDC token account", {
       wallet: walletAddress,
       tokenAccount: tokenAccount.toBase58(),
       signature,
@@ -193,9 +193,9 @@ export class USDCService {
    */
   async transfer(
     request: TransferRequest,
-    signer: Keypair
+    signer: Keypair,
   ): Promise<USDCTransfer> {
-    logger.info('Initiating USDC transfer', {
+    logger.info("Initiating USDC transfer", {
       from: request.from,
       to: request.to,
       amount: request.amount,
@@ -209,20 +209,20 @@ export class USDCService {
     const balance = await this.getBalance(request.from);
     if (BigInt(balance.balanceRaw) < amountRaw) {
       throw new USDCError(
-        'Insufficient USDC balance',
+        "Insufficient USDC balance",
         USDCErrorCode.INSUFFICIENT_BALANCE,
-        { available: balance.balance, required: request.amount.toString() }
+        { available: balance.balance, required: request.amount.toString() },
       );
     }
 
     // Get token accounts
     const fromTokenAccount = await getAssociatedTokenAddress(
       this.usdcMint,
-      fromWallet
+      fromWallet,
     );
     const toTokenAccount = await getAssociatedTokenAddress(
       this.usdcMint,
-      toWallet
+      toWallet,
     );
 
     const transaction = new Transaction();
@@ -235,8 +235,8 @@ export class USDCService {
           signer.publicKey,
           toTokenAccount,
           toWallet,
-          this.usdcMint
-        )
+          this.usdcMint,
+        ),
       );
     }
 
@@ -246,25 +246,23 @@ export class USDCService {
         fromTokenAccount,
         toTokenAccount,
         fromWallet,
-        amountRaw
-      )
+        amountRaw,
+      ),
     );
 
     // Add memo if provided
     if (request.memo) {
-      transaction.add(
-        this.createMemoInstruction(request.memo)
-      );
+      transaction.add(this.createMemoInstruction(request.memo));
     }
 
     try {
       const signature = await sendAndConfirmTransaction(
         this.connection,
         transaction,
-        [signer]
+        [signer],
       );
 
-      logger.info('USDC transfer completed', {
+      logger.info("USDC transfer completed", {
         from: request.from,
         to: request.to,
         amount: request.amount,
@@ -284,12 +282,10 @@ export class USDCService {
         confirmedAt: new Date(),
       };
     } catch (error) {
-      logger.error('USDC transfer failed', { error, request });
-      throw new USDCError(
-        'Transfer failed',
-        USDCErrorCode.TRANSACTION_FAILED,
-        { originalError: String(error) }
-      );
+      logger.error("USDC transfer failed", { error, request });
+      throw new USDCError("Transfer failed", USDCErrorCode.TRANSACTION_FAILED, {
+        originalError: String(error),
+      });
     }
   }
 
@@ -299,9 +295,9 @@ export class USDCService {
   async batchTransfer(
     from: string,
     transfers: BatchTransferItem[],
-    signer: Keypair
+    signer: Keypair,
   ): Promise<BatchTransferResult> {
-    logger.info('Initiating batch USDC transfer', {
+    logger.info("Initiating batch USDC transfer", {
       from,
       recipientCount: transfers.length,
     });
@@ -315,10 +311,10 @@ export class USDCService {
 
     // Process transfers in chunks to avoid transaction size limits
     const CHUNK_SIZE = 5;
-    
+
     for (let i = 0; i < transfers.length; i += CHUNK_SIZE) {
       const chunk = transfers.slice(i, i + CHUNK_SIZE);
-      
+
       for (const transfer of chunk) {
         try {
           const result = await this.transfer(
@@ -328,14 +324,14 @@ export class USDCService {
               amount: transfer.amount,
               memo: transfer.memo,
             },
-            signer
+            signer,
           );
 
           results.successful++;
           results.transfers.push({
             to: transfer.to,
             amount: transfer.amount,
-            status: 'success',
+            status: "success",
             transactionSignature: result.transactionSignature,
           });
         } catch (error) {
@@ -343,14 +339,14 @@ export class USDCService {
           results.transfers.push({
             to: transfer.to,
             amount: transfer.amount,
-            status: 'failed',
-            error: error instanceof Error ? error.message : 'Unknown error',
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown error",
           });
         }
       }
     }
 
-    logger.info('Batch transfer completed', {
+    logger.info("Batch transfer completed", {
       total: results.total,
       successful: results.successful,
       failed: results.failed,
@@ -363,10 +359,10 @@ export class USDCService {
    * Estimate transfer fee
    */
   async estimateTransferFee(
-    recipientHasAccount: boolean
+    recipientHasAccount: boolean,
   ): Promise<TransactionFeeEstimate> {
     const baseFee = 0.000005; // 5000 lamports base fee
-    let priorityFee = 0.00001; // Default priority fee
+    const priorityFee = 0.00001; // Default priority fee
 
     // Add account creation cost if needed
     const accountCreationFee = recipientHasAccount ? 0 : 0.00203928; // ~2039280 lamports for rent
@@ -384,28 +380,27 @@ export class USDCService {
    */
   async getTransactionHistory(
     walletAddress: string,
-    limit: number = 50
+    limit: number = 50,
   ): Promise<USDCTransfer[]> {
     try {
       const wallet = new PublicKey(walletAddress);
       const tokenAccount = await getAssociatedTokenAddress(
         this.usdcMint,
-        wallet
+        wallet,
       );
 
       const signatures = await this.connection.getSignaturesForAddress(
         tokenAccount,
-        { limit }
+        { limit },
       );
 
       const transfers: USDCTransfer[] = [];
 
       for (const sig of signatures) {
         try {
-          const tx = await this.connection.getParsedTransaction(
-            sig.signature,
-            { maxSupportedTransactionVersion: 0 }
-          );
+          const tx = await this.connection.getParsedTransaction(sig.signature, {
+            maxSupportedTransactionVersion: 0,
+          });
 
           if (tx?.meta && !tx.meta.err) {
             // Parse transfer details from transaction
@@ -413,9 +408,9 @@ export class USDCService {
             transfers.push({
               id: sig.signature,
               from: walletAddress,
-              to: '', // Would parse from instruction
-              amount: '0', // Would parse from instruction
-              amountRaw: '0',
+              to: "", // Would parse from instruction
+              amount: "0", // Would parse from instruction
+              amountRaw: "0",
               transactionSignature: sig.signature,
               status: TransferStatus.CONFIRMED,
               createdAt: new Date(sig.blockTime! * 1000),
@@ -429,7 +424,10 @@ export class USDCService {
 
       return transfers;
     } catch (error) {
-      logger.error('Failed to get transaction history', { error, walletAddress });
+      logger.error("Failed to get transaction history", {
+        error,
+        walletAddress,
+      });
       return [];
     }
   }
@@ -448,8 +446,10 @@ export class USDCService {
     const divisor = BigInt(Math.pow(10, USDC_DECIMALS));
     const wholePart = amountRaw / divisor;
     const fractionalPart = amountRaw % divisor;
-    
-    const fractionalStr = fractionalPart.toString().padStart(USDC_DECIMALS, '0');
+
+    const fractionalStr = fractionalPart
+      .toString()
+      .padStart(USDC_DECIMALS, "0");
     return `${wholePart}.${fractionalStr}`;
   }
 
@@ -458,13 +458,13 @@ export class USDCService {
    */
   private createMemoInstruction(memo: string): TransactionInstruction {
     const MEMO_PROGRAM_ID = new PublicKey(
-      'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
+      "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
     );
 
     return new TransactionInstruction({
       keys: [],
       programId: MEMO_PROGRAM_ID,
-      data: Buffer.from(memo, 'utf-8'),
+      data: Buffer.from(memo, "utf-8"),
     });
   }
 

@@ -1,12 +1,12 @@
 /**
  * Anchorage Digital Integration - Transaction Service
- * 
+ *
  * Service for managing custody transactions
  */
 
-import { config } from '../../config';
-import { logger } from '../../utils/logger';
-import { anchorageClient } from './AnchorageClient';
+import { config } from "../../config";
+import { logger } from "../../utils/logger";
+import { anchorageClient } from "./AnchorageClient";
 import {
   CustodyTransaction,
   TransactionStatus,
@@ -15,7 +15,7 @@ import {
   AnchorageError,
   PaginationParams,
   PaginatedResponse,
-} from './types';
+} from "./types";
 
 /**
  * Transaction creation result
@@ -39,8 +39,10 @@ export class TransactionService {
   /**
    * Create a withdrawal transaction
    */
-  async createWithdrawal(request: WithdrawalRequest): Promise<TransactionResult> {
-    logger.info('Creating withdrawal', {
+  async createWithdrawal(
+    request: WithdrawalRequest,
+  ): Promise<TransactionResult> {
+    logger.info("Creating withdrawal", {
       asset: request.asset,
       amount: request.amount,
       destination: request.destinationAddress,
@@ -49,9 +51,9 @@ export class TransactionService {
     // Validate destination address format
     if (!this.isValidAddress(request.destinationAddress)) {
       throw new AnchorageError(
-        'Invalid destination address',
-        'INVALID_ADDRESS',
-        400
+        "Invalid destination address",
+        "INVALID_ADDRESS",
+        400,
       );
     }
 
@@ -64,9 +66,10 @@ export class TransactionService {
       memo: request.memo,
     });
 
-    const requiresApproval = transaction.status === TransactionStatus.PENDING_APPROVAL;
+    const requiresApproval =
+      transaction.status === TransactionStatus.PENDING_APPROVAL;
 
-    logger.info('Withdrawal created', {
+    logger.info("Withdrawal created", {
       transactionId: transaction.id,
       status: transaction.status,
       requiresApproval,
@@ -89,7 +92,7 @@ export class TransactionService {
     amount: string;
     memo?: string;
   }): Promise<TransactionResult> {
-    logger.info('Creating internal transfer', {
+    logger.info("Creating internal transfer", {
       source: data.sourceWalletId,
       destination: data.destinationWalletId,
       asset: data.asset,
@@ -101,9 +104,10 @@ export class TransactionService {
       ...data,
     });
 
-    const requiresApproval = transaction.status === TransactionStatus.PENDING_APPROVAL;
+    const requiresApproval =
+      transaction.status === TransactionStatus.PENDING_APPROVAL;
 
-    logger.info('Internal transfer created', {
+    logger.info("Internal transfer created", {
       transactionId: transaction.id,
       status: transaction.status,
     });
@@ -133,7 +137,7 @@ export class TransactionService {
       asset?: string;
       startDate?: Date;
       endDate?: Date;
-    }
+    },
   ): Promise<PaginatedResponse<CustodyTransaction>> {
     return anchorageClient.listTransactions(this.vaultId, params);
   }
@@ -154,17 +158,17 @@ export class TransactionService {
    */
   async cancelTransaction(
     transactionId: string,
-    reason: string
+    reason: string,
   ): Promise<CustodyTransaction> {
-    logger.info('Cancelling transaction', { transactionId, reason });
+    logger.info("Cancelling transaction", { transactionId, reason });
 
     const transaction = await anchorageClient.cancelTransaction(
       this.vaultId,
       transactionId,
-      reason
+      reason,
     );
 
-    logger.info('Transaction cancelled', { transactionId });
+    logger.info("Transaction cancelled", { transactionId });
     return transaction;
   }
 
@@ -173,7 +177,7 @@ export class TransactionService {
    */
   async waitForConfirmation(
     transactionId: string,
-    timeoutMs: number = 300000 // 5 minutes default
+    timeoutMs: number = 300000, // 5 minutes default
   ): Promise<CustodyTransaction> {
     const startTime = Date.now();
     const pollInterval = 5000; // 5 seconds
@@ -187,19 +191,19 @@ export class TransactionService {
 
       if (transaction.status === TransactionStatus.FAILED) {
         throw new AnchorageError(
-          'Transaction failed',
-          'TRANSACTION_FAILED',
+          "Transaction failed",
+          "TRANSACTION_FAILED",
           400,
-          { transactionId }
+          { transactionId },
         );
       }
 
       if (transaction.status === TransactionStatus.REJECTED) {
         throw new AnchorageError(
-          'Transaction rejected',
-          'TRANSACTION_REJECTED',
+          "Transaction rejected",
+          "TRANSACTION_REJECTED",
           400,
-          { transactionId }
+          { transactionId },
         );
       }
 
@@ -208,10 +212,10 @@ export class TransactionService {
     }
 
     throw new AnchorageError(
-      'Transaction confirmation timeout',
-      'TIMEOUT',
+      "Transaction confirmation timeout",
+      "TIMEOUT",
       408,
-      { transactionId }
+      { transactionId },
     );
   }
 
@@ -220,7 +224,7 @@ export class TransactionService {
    */
   async getAssetTransactionHistory(
     asset: string,
-    limit: number = 50
+    limit: number = 50,
   ): Promise<CustodyTransaction[]> {
     const result = await anchorageClient.listTransactions(this.vaultId, {
       asset,
@@ -234,7 +238,7 @@ export class TransactionService {
    */
   async getTransactionStats(
     startDate: Date,
-    endDate: Date
+    endDate: Date,
   ): Promise<{
     totalTransactions: number;
     byType: Record<TransactionType, number>;
@@ -249,7 +253,7 @@ export class TransactionService {
 
     const byType: Record<string, number> = {};
     const byStatus: Record<string, number> = {};
-    let totalVolumeUSD = 0;
+    const totalVolumeUSD = 0;
 
     for (const tx of result.data) {
       byType[tx.type] = (byType[tx.type] || 0) + 1;
@@ -306,16 +310,19 @@ export class TransactionService {
 
     if (original.status !== TransactionStatus.FAILED) {
       throw new AnchorageError(
-        'Can only retry failed transactions',
-        'INVALID_STATUS',
-        400
+        "Can only retry failed transactions",
+        "INVALID_STATUS",
+        400,
       );
     }
 
-    logger.info('Retrying failed transaction', { transactionId });
+    logger.info("Retrying failed transaction", { transactionId });
 
     // Create new transaction with same parameters
-    if (original.type === TransactionType.WITHDRAWAL && original.destinationAddress) {
+    if (
+      original.type === TransactionType.WITHDRAWAL &&
+      original.destinationAddress
+    ) {
       const result = await this.createWithdrawal({
         vaultId: original.vaultId,
         walletId: original.walletId,
@@ -328,9 +335,9 @@ export class TransactionService {
     }
 
     throw new AnchorageError(
-      'Cannot retry this transaction type',
-      'UNSUPPORTED_RETRY',
-      400
+      "Cannot retry this transaction type",
+      "UNSUPPORTED_RETRY",
+      400,
     );
   }
 }

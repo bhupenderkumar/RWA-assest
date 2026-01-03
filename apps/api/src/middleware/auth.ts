@@ -1,17 +1,27 @@
 /**
  * Authentication Middleware
- * 
+ *
  * JWT verification and user context injection
  */
 
-import { Request, Response, NextFunction } from 'express';
-import { authService, TokenPayload, AuthError } from '../services/AuthService';
-import { prisma } from '../lib/prisma';
-import { logger } from '../utils/logger';
+import { Request, Response, NextFunction } from "express";
+import { authService, TokenPayload, AuthError } from "../services/AuthService";
+import { prisma } from "../lib/prisma";
+import { logger } from "../utils/logger";
 
 // Define types locally until Prisma client is generated
-type UserRole = 'PLATFORM_ADMIN' | 'BANK_ADMIN' | 'BANK_VIEWER' | 'INVESTOR' | 'AUDITOR';
-type KycStatus = 'PENDING' | 'IN_PROGRESS' | 'VERIFIED' | 'REJECTED' | 'EXPIRED';
+type UserRole =
+  | "PLATFORM_ADMIN"
+  | "BANK_ADMIN"
+  | "BANK_VIEWER"
+  | "INVESTOR"
+  | "AUDITOR";
+type KycStatus =
+  | "PENDING"
+  | "IN_PROGRESS"
+  | "VERIFIED"
+  | "REJECTED"
+  | "EXPIRED";
 
 /**
  * Extended user info attached to request
@@ -27,12 +37,10 @@ export interface AuthUser {
 /**
  * Extend Express Request type
  */
-declare global {
-  namespace Express {
-    interface Request {
-      user?: AuthUser;
-      token?: string;
-    }
+declare module "express-serve-static-core" {
+  interface Request {
+    user?: AuthUser;
+    token?: string;
   }
 }
 
@@ -41,13 +49,13 @@ declare global {
  */
 function extractToken(req: Request): string | null {
   const authHeader = req.headers.authorization;
-  
+
   if (!authHeader) {
     return null;
   }
 
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+  const parts = authHeader.split(" ");
+  if (parts.length !== 2 || parts[0].toLowerCase() !== "bearer") {
     return null;
   }
 
@@ -60,7 +68,7 @@ function extractToken(req: Request): string | null {
 export function authenticate(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   try {
     const token = extractToken(req);
@@ -68,8 +76,8 @@ export function authenticate(
     if (!token) {
       res.status(401).json({
         success: false,
-        error: 'Authentication required',
-        code: 'NO_TOKEN',
+        error: "Authentication required",
+        code: "NO_TOKEN",
       });
       return;
     }
@@ -98,11 +106,11 @@ export function authenticate(
       return;
     }
 
-    logger.error('Authentication error', { error });
+    logger.error("Authentication error", { error });
     res.status(401).json({
       success: false,
-      error: 'Authentication failed',
-      code: 'AUTH_ERROR',
+      error: "Authentication failed",
+      code: "AUTH_ERROR",
     });
   }
 }
@@ -113,7 +121,7 @@ export function authenticate(
 export function optionalAuth(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   try {
     const token = extractToken(req);
@@ -146,8 +154,8 @@ export function requireRoles(...roles: UserRole[]) {
     if (!req.user) {
       res.status(401).json({
         success: false,
-        error: 'Authentication required',
-        code: 'NO_USER',
+        error: "Authentication required",
+        code: "NO_USER",
       });
       return;
     }
@@ -155,8 +163,8 @@ export function requireRoles(...roles: UserRole[]) {
     if (!roles.includes(req.user.role)) {
       res.status(403).json({
         success: false,
-        error: 'Insufficient permissions',
-        code: 'FORBIDDEN',
+        error: "Insufficient permissions",
+        code: "FORBIDDEN",
       });
       return;
     }
@@ -171,22 +179,22 @@ export function requireRoles(...roles: UserRole[]) {
 export function requireKYC(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   if (!req.user) {
     res.status(401).json({
       success: false,
-      error: 'Authentication required',
-      code: 'NO_USER',
+      error: "Authentication required",
+      code: "NO_USER",
     });
     return;
   }
 
-  if (req.user.kycStatus !== 'VERIFIED') {
+  if (req.user.kycStatus !== "VERIFIED") {
     res.status(403).json({
       success: false,
-      error: 'KYC verification required',
-      code: 'KYC_REQUIRED',
+      error: "KYC verification required",
+      code: "KYC_REQUIRED",
       kycStatus: req.user.kycStatus,
     });
     return;
@@ -201,7 +209,7 @@ export function requireKYC(
 export async function fetchFullUser(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> {
   if (!req.user) {
     next();
@@ -220,8 +228,8 @@ export async function fetchFullUser(
     if (!user) {
       res.status(401).json({
         success: false,
-        error: 'User not found',
-        code: 'USER_NOT_FOUND',
+        error: "User not found",
+        code: "USER_NOT_FOUND",
       });
       return;
     }
@@ -229,17 +237,17 @@ export async function fetchFullUser(
     if (!user.isActive) {
       res.status(403).json({
         success: false,
-        error: 'Account disabled',
-        code: 'ACCOUNT_DISABLED',
+        error: "Account disabled",
+        code: "ACCOUNT_DISABLED",
       });
       return;
     }
 
     req.user.email = user.email;
-    
+
     next();
   } catch (error) {
-    logger.error('Error fetching user', { error, userId: req.user.id });
+    logger.error("Error fetching user", { error, userId: req.user.id });
     next(error);
   }
 }
@@ -250,23 +258,23 @@ export async function fetchFullUser(
 export function requireBankAdmin(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   if (!req.user) {
     res.status(401).json({
       success: false,
-      error: 'Authentication required',
-      code: 'NO_USER',
+      error: "Authentication required",
+      code: "NO_USER",
     });
     return;
   }
 
-  const allowedRoles: UserRole[] = ['PLATFORM_ADMIN', 'BANK_ADMIN'];
+  const allowedRoles: UserRole[] = ["PLATFORM_ADMIN", "BANK_ADMIN"];
   if (!allowedRoles.includes(req.user.role)) {
     res.status(403).json({
       success: false,
-      error: 'Bank admin access required',
-      code: 'FORBIDDEN',
+      error: "Bank admin access required",
+      code: "FORBIDDEN",
     });
     return;
   }
@@ -280,22 +288,22 @@ export function requireBankAdmin(
 export function requirePlatformAdmin(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): void {
   if (!req.user) {
     res.status(401).json({
       success: false,
-      error: 'Authentication required',
-      code: 'NO_USER',
+      error: "Authentication required",
+      code: "NO_USER",
     });
     return;
   }
 
-  if (req.user.role !== 'PLATFORM_ADMIN') {
+  if (req.user.role !== "PLATFORM_ADMIN") {
     res.status(403).json({
       success: false,
-      error: 'Platform admin access required',
-      code: 'FORBIDDEN',
+      error: "Platform admin access required",
+      code: "FORBIDDEN",
     });
     return;
   }
