@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS deps
+FROM node:25-bullseye AS deps
 
 # Install build dependencies for native modules
 RUN apt-get update && apt-get install -y \
@@ -27,7 +27,7 @@ RUN npm config set strict-ssl false && npm ci --ignore-scripts --workspace=@rwa-
 # -----------------------------------------------------------------------------
 # Stage 2: Builder
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS builder
+FROM node:25-bullseye AS builder
 
 WORKDIR /app
 
@@ -49,7 +49,7 @@ RUN npm run build
 # -----------------------------------------------------------------------------
 # Stage 3: Production dependencies
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS prod-deps
+FROM node:25-bullseye AS prod-deps
 
 RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
@@ -71,7 +71,7 @@ RUN NODE_TLS_REJECT_UNAUTHORIZED=0 npx prisma generate
 # -----------------------------------------------------------------------------
 # Stage 4: Production runner
 # -----------------------------------------------------------------------------
-FROM node:20-bullseye AS runner
+FROM node:25-bullseye AS runner
 
 # Install security updates and required packages
 RUN apt-get update && apt-get install -y \
